@@ -1,0 +1,17 @@
+name: farm-manager-backend
+
+services:
+  pg:
+    image: postgres:13-alpine
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - POSTGRES_DB=farm-manager
+    volumes:
+      - farm-manager-pg-data:/var/lib/postgresql/data
+
+volumes:
+  farm-manager-pg-data:
+    driver: local
