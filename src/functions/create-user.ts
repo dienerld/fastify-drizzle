@@ -27,7 +27,9 @@ export async function createUser({
     .execute()
 
   if (userDb) {
-    return
+    return {
+      newUser: false,
+    }
   }
 
   await db
@@ -41,4 +43,8 @@ export async function createUser({
       picture,
     })
     .execute()
+
+  return {
+    newUser: true,
+  }
 }

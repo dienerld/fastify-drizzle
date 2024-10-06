@@ -19,9 +19,10 @@ export const UserRouter: FastifyPluginAsyncZod = async app => {
       },
     },
     async request => {
-      const { fullName, firstName, externalId, email, lastName,picture } = request.body
+      const { fullName, firstName, externalId, email, lastName, picture } =
+        request.body
 
-      await createUser({
+      const response = await createUser({
         fullName,
         firstName,
         lastName,
@@ -29,6 +30,8 @@ export const UserRouter: FastifyPluginAsyncZod = async app => {
         externalId,
         picture,
       })
+
+      return response
     }
   )
 
