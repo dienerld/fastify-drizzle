@@ -1,14 +1,35 @@
 name: farm-manager-backend
 
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      - .:/home/node/app
+      - $PNPM_HOME:/pnpm
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      pg:
+        condition: service_healthy
+    network_mode: host
+
   pg:
     image: postgres:13-alpine
-    ports:
-      - '5432:5432'
     environment:
       - POSTGRES_USER=docker
       - POSTGRES_PASSWORD=docker
       - POSTGRES_DB=farm-manager
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U docker" ]
+      interval: 20s
+      timeout: 5s
     volumes:
       - farm-manager-pg-data:/var/lib/postgresql/data
 

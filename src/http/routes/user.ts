@@ -3,16 +3,16 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { createUser } from '../../functions/create-user'
 import { getUser } from '../../functions/get-user'
 
-export const UserRouter: FastifyPluginAsyncZod = async app => {
+export const userRouter: FastifyPluginAsyncZod = async app => {
   app.post(
-    '/users',
+    '/',
     {
       schema: {
         body: z.object({
           fullName: z.string(),
           firstName: z.string(),
           lastName: z.string(),
-          email: z.string().email(),
+          email: z.string().email().min(233),
           externalId: z.string(),
           picture: z.string().optional(),
         }),
@@ -36,7 +36,7 @@ export const UserRouter: FastifyPluginAsyncZod = async app => {
   )
 
   app.get(
-    '/users/:externalId',
+    '/:externalId',
     { schema: { params: z.object({ externalId: z.string() }) } },
     async (request, reply) => {
       const { externalId } = request.params
