@@ -1,59 +1,77 @@
-import type { onRequestHookHandler } from 'fastify'
-import { TokenExpiredError } from 'jsonwebtoken'
-import { verifyGoogleToken } from '~/utils/auth-google'
+import type { FastifyRequest, onRequestHookHandler } from 'fastify'
 
-function isRouteAllowed(allowedRoute: string, currentRoute: string) {
-  const currentRouteWithoutEndSlash = currentRoute.replace(/\/$/, '')
+import { env } from '@env'
 
-  // Verifica se a rota liberada é um wildcard
-  if (allowedRoute.endsWith('*')) {
-    const baseRoute = allowedRoute.slice(0, -1) // Remove o wildcard
-    return currentRoute.startsWith(baseRoute) // Verifica se a rota atual começa com a baseRoute
+function verifyVerb(allowedVerb: string | null, requestVerb?: string) {
+  if (!allowedVerb || !requestVerb) return true
+  return allowedVerb === requestVerb
+}
+function isRouteAllowed(_allowedRoute: string, request: FastifyRequest) {
+  const currentRoute = request.url
+  const requestVerb = request.method.toUpperCase()
+  let allowedRoute = _allowedRoute
+  let allowedRouteVerb: string | null = null
+  if (
+    ['GET', 'POST', 'PUT', 'DELETE'].includes(
+      allowedRoute.split(' ')[0].toUpperCase()
+    )
+  ) {
+    const [_allowedRouteVerb, _allowedRoute] = allowedRoute.split(' ')
+    allowedRouteVerb = _allowedRouteVerb
+    allowedRoute = _allowedRoute
   }
 
+  if (allowedRoute.endsWith('*')) {
+    let baseRoute = allowedRoute.slice(0, -1) // Remove o wildcard
+    if (baseRoute.endsWith('/')) {
+      baseRoute = baseRoute.slice(0, -1)
+    }
+
+    return (
+      verifyVerb(allowedRouteVerb, requestVerb) &&
+      currentRoute.startsWith(baseRoute)
+    ) // Verifica se a rota atual começa com a baseRoute
+  }
+
+  const currentRouteWithoutEndSlash =
+    currentRoute.length === 1 ? currentRoute : currentRoute.replace(/\/$/, '')
+
+  // verifica se allowedRoute tem verbo
+
+  // Verifica se a rota liberada é um wildcard
+
   // Para casos em que não é um wildcard
-  return allowedRoute === currentRouteWithoutEndSlash
+  return (
+    allowedRoute === currentRouteWithoutEndSlash &&
+    verifyVerb(allowedRouteVerb, requestVerb)
+  )
 }
 
 /**
  * Middleware to verify the token
  * @param publicPaths - Array of public paths
+ * @param requiredVerification - Array of path to force validation
  * @returns onRequestHookHandler
  * @example
  * app.addHook('onRequest', verifyToken(['/public-path']))
  * app.addHook('onRequest', verifyToken(['/public-path', '/another-public-path', '/public/*]))
  */
 
-export const verifyToken = (publicPaths?: string[]): onRequestHookHandler => {
-  return async (request, reply) => {
-    if (publicPaths?.some(path => isRouteAllowed(path, request.url))) {
-      return
-    }
+export const verifyToken: onRequestHookHandler = async (request, reply) => {
+  const authHeader = request.headers['x-api-key']
+  if (!authHeader) {
+    reply.code(403).send({
+      error: 'Forbidden',
+      message: 'No token provided',
+    })
+    return
+  }
 
-    try {
-      const authHeader = request.headers.authorization
-      if (!authHeader) {
-        reply.code(401).send({ error: 'No token provided' })
-        return
-      }
-
-      const token = authHeader.split(' ')[1] // Assume "Bearer TOKEN"
-      const userId = await verifyGoogleToken(token)
-
-      if (!userId) {
-        reply.code(401).send({ error: 'Invalid token' })
-        return
-      }
-
-      request.session.userId = userId
-    } catch (error) {
-      if (error instanceof TokenExpiredError) {
-        return reply.code(401).send({ error: 'Token expired' })
-      }
-
-      console.error('Error in preHandler hook:', error)
-      reply.code(500).send({ error: 'Internal server error' })
-      return
-    }
+  if (authHeader !== env.ACCESS_KEY) {
+    reply.code(403).send({
+      error: 'Forbidden',
+      message: 'Invalid Token',
+    })
+    return
   }
 }

@@ -1,15 +1,17 @@
 import IORedis from 'ioredis'
-import { env } from '../env'
+
+import { env } from '@env'
 
 export class Cache {
-  private client: IORedis
+  private static client: IORedis
 
   constructor() {
-    this.client = new IORedis(env.REDIS_URL)
+    if (Cache.client) return
+    Cache.client = new IORedis(env.REDIS_URL)
   }
 
   async get<T>(key: string): Promise<T | null> {
-    const value = await this.client.get(key)
+    const value = await Cache.client.get(key)
     if (!value) {
       return null
     }
@@ -24,8 +26,8 @@ export class Cache {
    */
   async set(key: string, value: string, ttl?: number): Promise<string> {
     if (ttl) {
-      return this.client.setex(key, ttl, value)
+      return Cache.client.setex(key, ttl, value)
     }
-    return this.client.set(key, value)
+    return Cache.client.set(key, value)
   }
 }

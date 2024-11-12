@@ -4,7 +4,7 @@ import '@fastify/session'
 
 declare module 'fastify' {
   interface Session {
-    userId: string
-
+    user_id: string
+    refresh_token: string
   }
 }
