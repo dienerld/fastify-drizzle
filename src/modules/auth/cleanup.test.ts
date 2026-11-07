@@ -15,20 +15,14 @@ const repo = (deleteExpired = vi.fn().mockResolvedValue(0)) =>
 const log = () => ({ info: vi.fn(), error: vi.fn() })
 
 describe('loadCleanupConfig', () => {
-  it('defaults to 1d retention and an hourly pass', () => {
-    expect(loadCleanupConfig({})).toEqual({
-      retentionSeconds: 86_400,
-      intervalSeconds: 3600,
-    })
+  it('defaults to an hourly pass', () => {
+    expect(loadCleanupConfig({})).toEqual({ intervalSeconds: 3600 })
   })
 
-  it('reads durations from the env and rejects bad ones', () => {
-    expect(
-      loadCleanupConfig({
-        REFRESH_TOKEN_RETENTION: '2d',
-        TOKEN_CLEANUP_INTERVAL: '0s',
-      })
-    ).toEqual({ retentionSeconds: 172_800, intervalSeconds: 0 })
+  it('reads the interval from the env and rejects bad ones', () => {
+    expect(loadCleanupConfig({ TOKEN_CLEANUP_INTERVAL: '0s' })).toEqual({
+      intervalSeconds: 0,
+    })
     expect(() => loadCleanupConfig({ TOKEN_CLEANUP_INTERVAL: 'soon' })).toThrow(
       /TOKEN_CLEANUP_INTERVAL/
     )
@@ -36,21 +30,18 @@ describe('loadCleanupConfig', () => {
 })
 
 describe('cleanupRefreshTokens', () => {
-  it('expires now and keeps revoked tokens for the retention period', async () => {
+  it('deletes only what expired before now', async () => {
     const r = repo()
     const now = new Date('2026-01-10T00:00:00Z')
-    await cleanupRefreshTokens(r, 86_400, now)
-    expect(r.deleteExpired).toHaveBeenCalledWith({
-      expiredBefore: now,
-      revokedBefore: new Date('2026-01-09T00:00:00Z'),
-    })
+    await cleanupRefreshTokens(r, now)
+    expect(r.deleteExpired).toHaveBeenCalledWith(now)
   })
 })
 
 describe('startRefreshTokenCleanup', () => {
   afterEach(() => vi.useRealTimers())
 
-  const config = { retentionSeconds: 86_400, intervalSeconds: 60 }
+  const config = { intervalSeconds: 60 }
 
   it('runs every interval until stopped', async () => {
     vi.useFakeTimers()

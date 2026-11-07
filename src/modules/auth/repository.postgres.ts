@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt, or } from 'drizzle-orm'
+import { and, eq, isNull, lt } from 'drizzle-orm'
 
 import type { PostgresDb } from '~/infra/db/postgres/client'
 import { isUuid } from '~/infra/db/postgres/uuid'
@@ -58,15 +58,10 @@ export function createRefreshTokenRepositoryPostgres(
       return rows.length
     },
 
-    async deleteExpired({ expiredBefore, revokedBefore }) {
+    async deleteExpired(before) {
       const rows = await db
         .delete(refreshTokens)
-        .where(
-          or(
-            lt(refreshTokens.expiresAt, expiredBefore),
-            lt(refreshTokens.revokedAt, revokedBefore)
-          )
-        )
+        .where(lt(refreshTokens.expiresAt, before))
         .returning({ id: refreshTokens.id })
       return rows.length
     },

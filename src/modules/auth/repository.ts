@@ -33,13 +33,10 @@ export interface RefreshTokenRepository {
   /** Revokes every still-active token of the family. Returns how many. */
   revokeFamily(familyId: string): Promise<number>
   /**
-   * Housekeeping. Deletes tokens that expired before `expiredBefore` and
-   * tokens revoked (rotated, logged out, family revoked) before
-   * `revokedBefore`. Active tokens are never deleted. Returns how many.
-   * A revoked token must stay a while so that reusing it is still detected.
+   * Housekeeping: deletes the tokens that expired before `before` and returns
+   * how many. Only expired ones: a revoked/rotated token that has not expired
+   * must stay, otherwise reusing it would look like an unknown token (plain
+   * 401) and the family of an attacker that already used it would stay alive.
    */
-  deleteExpired(cutoffs: {
-    expiredBefore: Date
-    revokedBefore: Date
-  }): Promise<number>
+  deleteExpired(before: Date): Promise<number>
 }

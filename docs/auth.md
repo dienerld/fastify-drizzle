@@ -30,8 +30,7 @@ cliente --POST /auth/logout  { refreshToken }--> revoga a sessão (sempre 204)
 | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW` | `300` / `1m` | limite global por IP |
 | `RATE_LIMIT_AUTH_MAX` / `RATE_LIMIT_AUTH_WINDOW` | `20` / `1m` | limite de `/auth/*` (por IP; refresh/logout também por token) |
 | `TRUST_PROXY` | `false` | IP real atrás de proxy: `true`, saltos (`1`) ou IPs/CIDRs |
-| `REFRESH_TOKEN_RETENTION` | `1d` | quanto tempo manter refresh tokens revogados (detecção de reuso) |
-| `TOKEN_CLEANUP_INTERVAL` | `1h` | período da limpeza no processo; `0s` desliga |
+| `TOKEN_CLEANUP_INTERVAL` | `1h` | período da limpeza de tokens expirados no processo; `0s` desliga |
 
 Limite de requisições e limpeza de tokens têm as suas próprias variáveis (abaixo e em `.env.example`).
 
@@ -50,14 +49,9 @@ Crie o client id em Google Cloud Console (APIs e serviços → Credenciais → I
 
 ## Limpeza de refresh tokens
 
-A tabela/coleção `refresh_tokens` só cresce se ninguém apagar. `RefreshTokenRepository.deleteExpired({ expiredBefore, revokedBefore })` remove:
+Sem limpeza, `refresh_tokens` só cresce. `RefreshTokenRepository.deleteExpired(before)` apaga **só os tokens com `expiresAt < before`** (a limpeza passa "agora"). Um token expirado já recebe 401 antes de qualquer outra checagem, então guardá-lo não serve para nada.
 
-1. tokens com `expiresAt < expiredBefore` (a limpeza usa "agora"): um token expirado já recebe 401 antes de qualquer outra checagem, então guardá-lo não serve para nada;
-2. tokens **revogados** (rotacionados, logout, família revogada) com `revokedAt < revokedBefore`, ou seja, revogados há mais que a retenção.
-
-Token ativo nunca é apagado.
-
-**Retenção dos revogados** (`REFRESH_TOKEN_RETENTION`, padrão `1d`): enquanto o token revogado existe, reapresentá-lo é detectado como **reuso** e revoga a família inteira. Depois de apagado ele vira "desconhecido" (401 simples): o atacante continua sem acesso, mas **a família não é revogada** e o token legítimo mais novo segue valendo. Por isso a retenção deve ser no mínimo o `ACCESS_TOKEN_TTL` (o padrão de 1 dia é bem maior que os 15 minutos); aumente se quiser detectar reuso por mais tempo, ao custo de guardar mais linhas.
+**Tokens revogados (rotacionados, logout, família revogada) não são apagados antes de expirar**, de propósito. Enquanto o token revogado existe, reapresentá-lo é detectado como **reuso** e revoga a família inteira. Se ele fosse apagado cedo, viraria "desconhecido" (401 simples) e a família de um atacante que já tivesse usado o token roubado continuaria viva. Consequência: o armazenamento fica limitado por `REFRESH_TOKEN_TTL` (30d por padrão): no máximo as linhas dos últimos 30 dias de logins e rotações. Para guardar menos, diminua o `REFRESH_TOKEN_TTL`. Token ativo nunca é apagado.
 
 Quem executa:
 
@@ -65,7 +59,9 @@ Quem executa:
 | --- | --- |
 | Dentro do processo (Postgres e Mongo) | `setInterval(...).unref()` a cada `TOKEN_CLEANUP_INTERVAL` (padrão `1h`; `0s` desliga), sem passadas sobrepostas, erro só logado, parado no desligamento gracioso. Com várias instâncias todas rodam; o `DELETE` é idempotente. |
 | Cron externo | `pnpm tokens:cleanup` (lê o `.env`, uma passada, imprime quantos apagou). Use com `TOKEN_CLEANUP_INTERVAL=0s` para desligar o timer interno. |
-| Mongo, além disso | índice TTL em `expiresAt` (`expireAfterSeconds: 0`): o próprio MongoDB apaga os expirados (checa a cada ~1 min). Os revogados ainda não expirados saem pela limpeza acima. |
+| Mongo, além disso | índice TTL em `expiresAt` (`expireAfterSeconds: 0`): o próprio MongoDB apaga os expirados (checa a cada ~1 min); com Mongo o timer interno é opcional. |
+
+Testes: `repository.contract.ts` (`deleteExpired`, inclusive "revogado e não expirado não é apagado") nos dois bancos e `routes.contract.ts` ("reuso continua detectado depois da limpeza").
 
 ## Proteger rotas
 

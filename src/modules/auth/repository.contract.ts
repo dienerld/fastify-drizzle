@@ -113,11 +113,7 @@ export function describeRefreshTokenRepositoryContract(
           expiresAt: past(hour),
         })
         await create('active')
-        const deleted = await repos.refreshTokens.deleteExpired({
-          expiredBefore: new Date(),
-          revokedBefore: past(hour),
-        })
-        expect(deleted).toBe(1)
+        expect(await repos.refreshTokens.deleteExpired(new Date())).toBe(1)
         expect(await exists('expired')).toBe(false)
         expect(await exists('active')).toBe(true)
       })
@@ -129,50 +125,33 @@ export function describeRefreshTokenRepositoryContract(
           tokenHash: 'recent',
           expiresAt: past(1000),
         })
-        expect(
-          await repos.refreshTokens.deleteExpired({
-            expiredBefore: past(hour),
-            revokedBefore: past(hour),
-          })
-        ).toBe(0)
+        expect(await repos.refreshTokens.deleteExpired(past(hour))).toBe(0)
         expect(await exists('recent')).toBe(true)
       })
 
-      it('keeps recently revoked tokens (reuse detection) and deletes older ones', async () => {
+      it('never deletes a revoked token that has not expired (reuse detection)', async () => {
         const old = await create('old')
         const next = await create('next')
         await repos.refreshTokens.markRotated(old.id, next.id)
-
-        // revoked just now, retention of one hour: stays
+        await repos.refreshTokens.revokeFamily(family1)
+        expect(await repos.refreshTokens.deleteExpired(new Date())).toBe(0)
         expect(
-          await repos.refreshTokens.deleteExpired({
-            expiredBefore: new Date(),
-            revokedBefore: past(hour),
-          })
-        ).toBe(0)
-        expect(await exists('old')).toBe(true)
-
-        // retention over (cutoff after the revocation): the revoked one goes,
-        // the still active successor stays
-        expect(
-          await repos.refreshTokens.deleteExpired({
-            expiredBefore: new Date(),
-            revokedBefore: new Date(Date.now() + hour),
-          })
-        ).toBe(1)
-        expect(await exists('old')).toBe(false)
+          (await repos.refreshTokens.findByHash('old'))?.revokedAt
+        ).not.toBeNull()
         expect(await exists('next')).toBe(true)
       })
 
-      it('never deletes an active token, whatever the cutoffs', async () => {
-        await create('alive')
-        expect(
-          await repos.refreshTokens.deleteExpired({
-            expiredBefore: past(hour),
-            revokedBefore: new Date(Date.now() + hour),
-          })
-        ).toBe(0)
-        expect(await exists('alive')).toBe(true)
+      it('deletes a token that is both revoked and expired', async () => {
+        const t = await repos.refreshTokens.create({
+          userId,
+          familyId: family1,
+          tokenHash: 'both',
+          expiresAt: past(hour),
+        })
+        await repos.refreshTokens.revokeFamily(family1)
+        expect(t.revokedAt).toBeNull()
+        expect(await repos.refreshTokens.deleteExpired(new Date())).toBe(1)
+        expect(await exists('both')).toBe(false)
       })
     })
   })

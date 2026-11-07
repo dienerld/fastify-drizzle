@@ -7,6 +7,7 @@ import { buildApp } from '~/app'
 import { env } from '~/env'
 import type { Database } from '~/infra/repositories'
 import { bearer, createFakeGoogle, type FakeGoogle } from '~/test/auth'
+import { cleanupRefreshTokens } from './cleanup'
 import { hashToken } from './tokens'
 
 /**
@@ -332,6 +333,18 @@ export function describeAuthRoutes(makeDb: () => Promise<Database>) {
 
         // everything descended from that login is now dead, even the newest
         expect((await refresh(third.refreshToken)).statusCode).toBe(401)
+        expect((await refresh(second.refreshToken)).statusCode).toBe(401)
+      })
+
+      it('reuse is still detected after the cleanup ran (revoked tokens are kept until they expire)', async () => {
+        const first = await freshLogin()
+        const second = (await refresh(first.refreshToken)).json()
+        await cleanupRefreshTokens(db.repositories.refreshTokens)
+
+        const replay = await refresh(first.refreshToken)
+        expect(replay.statusCode).toBe(401)
+        expect(replay.json().message).toBe('Refresh token reused')
+        // ...and the family is revoked, so the newest token is dead too
         expect((await refresh(second.refreshToken)).statusCode).toBe(401)
       })
 
