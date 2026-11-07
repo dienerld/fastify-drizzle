@@ -1,25 +1,21 @@
-version: '3.8'
+# Adds the `app` service (the dev container) next to the databases of
+# ../docker-compose.yml. Paths here are relative to that primary file.
 services:
-  # Update this to the name of the service you want to work with in your docker-compose.yml file
   app:
-    # Uncomment if you want to override the service's Dockerfile to one in the .devcontainer
-    # folder. Note that the path of the Dockerfile and context is relative to the *primary*
-    # docker-compose.yml file (the first in the devcontainer.json "dockerComposeFile"
-    # array). The sample below assumes your primary file is in the root of your project.
-    #
-    # build:
-    #   context: .
-    #   dockerfile: .devcontainer/Dockerfile
-
-    volumes:
-      # Update this to wherever you want VS Code to mount the folder of your project
-      - .:/home/node/app:cached
-
-    # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
-    # cap_add:
-    #   - SYS_PTRACE
-    # security_opt:
-    #   - seccomp:unconfined
-
-    # Overrides default command so things don't shut down after the process ends.
+    image: mcr.microsoft.com/devcontainers/typescript-node:24-bookworm
+    # keep the container alive; VS Code / the CLI attach to it
     command: sleep infinity
+    volumes:
+      - .:/workspaces/fastify-api-template:cached
+    environment:
+      # Inside the compose network the databases are reached by service name and
+      # their container ports (not the host ports of ../docker-compose.yml).
+      DATABASE_URL: postgres://docker:docker@postgres:5432/app
+      TEST_DATABASE_URL: postgres://docker:docker@postgres:5432/app_test
+      # Mongo announces `localhost:27018` in its replica set, which is not
+      # reachable from here, so connect to the node directly (transactions work).
+      TEST_MONGODB_URI: mongodb://mongo:27018/?directConnection=true
+      TEST_REDIS_URL: redis://redis:6379/15
+      # Use the same values (hostnames above) in .env for `pnpm dev` with Mongo/Redis:
+      #   MONGODB_URI=mongodb://mongo:27018/?directConnection=true
+      #   REDIS_URL=redis://redis:6379

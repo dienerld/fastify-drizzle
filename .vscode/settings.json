@@ -9,31 +9,5 @@
       "source.addMissingImports.ts": "explicit"
     }
   },
-  "biome.enabled": true,
-  "sqltools.connections": [
-    {
-      "previewLimit": 50,
-      "server": "localhost",
-      "port": 5432,
-      "driver": "PostgreSQL",
-      "name": "Farm",
-      "group": "Personal",
-      "database": "app",
-      "username": "docker",
-      "password": "docker"
-    },
-    {
-      "pgOptions": {
-        "ssl": {
-          "rejectUnauthorized": true
-        }
-      },
-      "previewLimit": 50,
-      "server": "localhost",
-      "driver": "PostgreSQL",
-      "connectString": "postgres://REMOVED",
-      "name": "Farm-Prod",
-      "group": "Personal"
-    }
-  ]
+  "biome.enabled": true
 }

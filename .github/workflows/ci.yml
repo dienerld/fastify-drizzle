@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # lint, boundaries, types, build and the unit tests (no database)
+  check-fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:fast
+      - run: pnpm build
+
+  # the contract tests of each database against the real thing
+  # (databases come from docker-compose.yml, same as locally)
+  db:
+    name: db (${{ matrix.db }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [postgres, mongo]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:up:${{ matrix.db }}
+      - run: pnpm test:${{ matrix.db }}
+
+  # Redis store/cache tests (rate limit counters shared between instances)
+  redis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:up:redis
+      - run: pnpm test:redis
+
+  # the production image builds (no push, no deploy)
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t fastify-api-template .
