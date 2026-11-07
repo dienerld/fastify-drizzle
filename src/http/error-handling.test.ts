@@ -9,6 +9,7 @@ import { z } from 'zod'
 
 import { buildApp } from '~/app'
 import { env } from '~/env'
+import { noRepositories } from '~/test/no-repositories'
 import { registerErrorHandlers } from '~/utils/error-handler'
 
 function bareApp() {
@@ -26,7 +27,7 @@ afterEach(() => {
 
 describe('error format', () => {
   it('returns standard 404', async () => {
-    const app = await buildApp()
+    const app = await buildApp({ repositories: noRepositories })
     const res = await app.inject({ method: 'GET', url: '/nope' })
     expect(res.statusCode).toBe(404)
     expect(res.json()).toEqual({
@@ -98,13 +99,13 @@ describe('error format', () => {
 
 describe('docs', () => {
   it('serves OpenAPI with documented routes and /docs UI', async () => {
-    const app = await buildApp()
+    const app = await buildApp({ repositories: noRepositories })
     const spec = await app.inject({ method: 'GET', url: '/docs/openapi.json' })
     expect(spec.statusCode).toBe(200)
     const doc = spec.json()
     expect(doc.info.title).toBe('fastify-api-template')
     expect(Object.keys(doc.paths)).toEqual(
-      expect.arrayContaining(['/', '/health', '/users'])
+      expect.arrayContaining(['/', '/health', '/users', '/todos'])
     )
     const ui = await app.inject({ method: 'GET', url: '/docs/' })
     expect(ui.statusCode).toBe(200)

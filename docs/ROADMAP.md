@@ -22,7 +22,7 @@ As versões da coluna "Atual" foram conferidas no npm em 2026-11-07 e servem só
 | zod / fastify-type-provider-zod | 3.23 / 4.0 | 4.6.7 / 7.0.0 (API mudou) |
 | drizzle-orm / drizzle-kit | 0.33 / 0.24 | 0.45.4 / 0.31.11 |
 | postgres (driver) | — | 4.1.0 |
-| mongodb (driver oficial) | — | 7.8.0 |
+| mongoose | — | 9.12.0 |
 | @fastify/swagger / @scalar/fastify-api-reference | 9.1 / 1.25 | 9.9.3 / 1.77.0 |
 | typescript | 5.6 | 7.0.2 |
 | vitest | 2.1 (sem nenhum teste) | 5.1.0 |
@@ -47,7 +47,7 @@ Problemas encontrados no código (corrigir, não só atualizar):
 - Fastify continua sendo o framework.
 - Template **genérico**, com **Postgres (Drizzle) e MongoDB** prontos e **bem documentados**.
 - **O banco não é escolhido por variável de ambiente.** O template mantém a configuração dos dois; ao criar um projeto, o dev ou o agente escolhe o banco e **apaga manualmente o módulo do outro** (código, dependências, compose, scripts, env, testes, CI, docs). **Não há comando de seleção**: o README tem uma seção explicando o passo a passo.
-- **Cada banco tem seus próprios models/schemas**: Drizzle (`pgTable`) no Postgres; tipos de documento, coleções, índices e validador `$jsonSchema` no Mongo. Não existe um schema "neutro" que gere os dois.
+- **Cada banco tem seus próprios models/schemas**: Drizzle (`pgTable`) no Postgres; `Schema`/`model` do Mongoose no Mongo. Não existe um schema "neutro" que gere os dois.
 - **Node 24 LTS + pnpm** (sempre a última versão do pnpm, fixada em `packageManager`). Bun descartado.
 - **tsdown** como bundler (no lugar do tsup).
 - **Sempre a última versão estável** de cada dependência no momento da implementação.
@@ -58,11 +58,12 @@ Problemas encontrados no código (corrigir, não só atualizar):
 | # | Decisão | Motivo |
 |---|---|---|
 | P1 | Código de cada banco isolado por **convenção de nome**: pastas `src/infra/db/postgres/` e `src/infra/db/mongo/`, arquivos `*.postgres.ts` / `*.mongo.ts` (e testes `*.postgres.test.ts` / `*.mongo.test.ts`). O único ponto que escolhe o banco é `src/infra/db/index.ts` (um re-export). No template ele aponta para Postgres por padrão; os testes usam os dois adaptadores diretamente | Quem remove o banco descartado acha tudo por nome (`find`/`grep`), sem precisar entender o código; trocar de banco não toca rota nem serviço |
-| P2 | Seção **"Escolhendo o banco"** no README, com checklist manual por banco: apagar pastas/arquivos do outro banco; ajustar `src/infra/db/index.ts`; remover dependências (`drizzle-orm`, `drizzle-kit`, `postgres` ↔ `mongodb`), serviço do compose, scripts `db:*`/`test:*`, variáveis do `.env.example`, entrada da matriz do CI e trechos das docs; conferir sobras com um `grep` indicado na seção; rodar `pnpm install` e `pnpm check`. Também entra no `AGENTS.md` | Sem script frágil para manter; o passo é raro (uma vez por projeto) e fica explícito para humanos e agentes |
-| P3 | Models/schemas **nativos de cada banco** dentro do adaptador: `schema.postgres.ts` (Drizzle) e `schema.mongo.ts` (tipo do documento, nome da coleção, índices, `$jsonSchema`). O módulo define só os **tipos de domínio** (o que o serviço vê) e cada adaptador mapeia linha/documento ↔ domínio | Cada banco é usado do jeito dele (ex.: `_id`/ObjectId no Mongo, `uuid` no Postgres) sem abstração que esconda diferenças |
-| P4 | MongoDB pelo **driver oficial `mongodb`**, sem Mongoose | Menos camadas; validação de entrada já fica no Zod |
+| P2 | Seção **"Escolhendo o banco"** no README, com checklist manual por banco: apagar pastas/arquivos do outro banco; ajustar `src/infra/db/index.ts`; remover dependências (`drizzle-orm`, `drizzle-kit`, `postgres` ↔ `mongoose`), serviço do compose, scripts `db:*`/`test:*`, variáveis do `.env.example`, entrada da matriz do CI e trechos das docs; conferir sobras com um `grep` indicado na seção; rodar `pnpm install` e `pnpm check`. Também entra no `AGENTS.md` | Sem script frágil para manter; o passo é raro (uma vez por projeto) e fica explícito para humanos e agentes |
+| P3 | Models/schemas **nativos de cada banco** dentro do adaptador: `schema.postgres.ts` (Drizzle) e `schema.mongo.ts` (Schema e model do Mongoose, com validação e índices). O módulo define só os **tipos de domínio** (o que o serviço vê) e cada adaptador mapeia linha/documento ↔ domínio | Cada banco é usado do jeito dele (ex.: `_id`/ObjectId no Mongo, `uuid` no Postgres) sem abstração que esconda diferenças |
+| P4 | MongoDB via **Mongoose** (decisão do dono): `schema.mongo.ts` com `Schema` + `model` (campos, validação, índices); `repository.mongo.ts` usa `.lean()` e mapeia para o domínio, sem documento do Mongoose saindo do adaptador; conexão dedicada (`createConnection`) e `syncIndexes()` no boot | Schema declarativo, maduro e conhecido por humanos e agentes; Zod segue validando a entrada HTTP |
 | P5 | **Repositório por módulo**: interface com só os métodos que o módulo usa + um adaptador por banco. Uma **suíte de contrato** por repositório roda contra os dois adaptadores no template (e contra o que sobrar no projeto) | Garante que os dois bancos se comportam igual enquanto coexistem |
-| P6 | Remover `@fastify/session` e Redis; auth **stateless**: access token JWT curto + refresh token guardado no banco (pelo repositório, funciona nos dois) | Um mecanismo só, sem dependência extra |
+| P6 | Remover `@fastify/session`; auth **stateless**: access token JWT curto + refresh token guardado no banco (pelo repositório, funciona nos dois). **Redis fica no template**, desacoplado da auth, como infraestrutura de cache genérica (ver P13) | Auth com um mecanismo só; Redis continua disponível para os projetos que precisarem |
+| P13 | Redis em `src/infra/cache/` (cliente `ioredis` na última versão, `connect(env)` → `{ cache, close }`, env próprio em `src/infra/cache/env.ts`, fechado no desligamento gracioso), serviço `redis` no compose (profile `redis`), testes de integração reais e `/health` informando o estado. Opcional: se o projeto não usar, remove manualmente a pasta, a dependência, o serviço e as variáveis, com checklist própria na seção do README | Pronto para uso, sem obrigar quem não precisa |
 | P7 | Login por **Google ID token** como provedor de exemplo do módulo `auth` (o app envia o token do Google; o servidor confere com `jose`/JWKS do Google e emite os tokens próprios); lista opcional de e-mails permitidos | É o padrão dos próximos projetos (inclusive a granja) e corrige a falha do item 1 |
 | P8 | Zod 4 + `fastify-type-provider-zod` 7 para validação e OpenAPI; Scalar em `/docs` | Mesmo stack, atualizado |
 | P9 | Estrutura por módulo: `routes.ts` (HTTP fino) → `service.ts` (regra, retorna `Result`) → `repository.ts` (interface + tipos de domínio) + `repository.postgres.ts` / `repository.mongo.ts` + `schema.postgres.ts` / `schema.mongo.ts` | Camadas claras para humanos e agentes; nomes que deixam claro o que apagar ao escolher o banco |
@@ -103,7 +104,7 @@ Cada fase termina com o comando de verificação passando e um commit (Conventio
 - **Pronto quando:** a mesma suíte de contrato passa contra os dois adaptadores.
 
 ### Fase 3: Auth
-- Remover session/Redis (P6). Plugin `auth` com `app.authenticate` (preHandler) e `request.user` tipado.
+- Remover `@fastify/session` e o uso de Redis pela auth (P6); reorganizar o Redis existente em `src/infra/cache/` conforme P13 (não remover). Plugin `auth` com `app.authenticate` (preHandler) e `request.user` tipado.
 - Fluxo P7: `POST /auth/google` (ID token → usuário criado/atualizado → access + refresh), `POST /auth/refresh` (rotação do refresh, o antigo deixa de valer), `POST /auth/logout`.
 - Refresh tokens com repositório próprio (interface + `*.postgres.ts` / `*.mongo.ts`), seguindo o mesmo padrão.
 - Lista opcional de e-mails permitidos por env; recusa com 403.

@@ -1,8 +1,10 @@
 import { buildApp } from '~/app'
 import { env } from '~/env'
+import { connect, loadEnv } from '~/infra/db'
 
 async function bootstrap() {
-  const app = await buildApp()
+  const db = await connect(loadEnv())
+  const app = await buildApp({ repositories: db.repositories })
 
   let closing = false
   const shutdown = async (signal: string) => {
@@ -11,6 +13,7 @@ async function bootstrap() {
     app.log.info({ signal }, 'shutting down')
     try {
       await app.close()
+      await db.close()
       process.exit(0)
     } catch (err) {
       app.log.error(err, 'error during shutdown')

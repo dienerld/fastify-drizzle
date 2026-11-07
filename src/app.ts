@@ -10,14 +10,18 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod'
-import { client } from '~/db'
 import { env } from '~/env'
 import { rootRouter } from '~/http/routes/root'
-import usersModule from '~/modules/users'
+import type { Repositories } from '~/infra/repositories'
+import { todoRoutes } from '~/modules/todo/routes'
+import { usersRoutes } from '~/modules/users/routes'
 import { registerErrorHandlers } from '~/utils/error-handler'
 import pkg from '../package.json' with { type: 'json' }
 
-export async function buildApp() {
+/** Composition root: everything the app needs from outside comes in here. */
+export type AppDeps = { repositories: Repositories }
+
+export async function buildApp({ repositories }: AppDeps) {
   const app = fastify({
     logger:
       env.nodeEnv === 'test'
@@ -46,10 +50,13 @@ export async function buildApp() {
   await app.register(scalarApiReference, { routePrefix: '/docs' })
 
   await app.register(rootRouter, { prefix: '/' })
-  await app.register(usersModule)
-
-  app.addHook('onClose', async () => {
-    await client.end({ timeout: 5 })
+  await app.register(usersRoutes, {
+    prefix: '/users',
+    users: repositories.users,
+  })
+  await app.register(todoRoutes, {
+    prefix: '/todos',
+    todos: repositories.todos,
   })
 
   await app.ready()

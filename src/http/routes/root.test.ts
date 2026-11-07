@@ -2,12 +2,13 @@ import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { buildApp } from '~/app'
+import { noRepositories } from '~/test/no-repositories'
 
 describe('root routes', () => {
   let app: FastifyInstance
 
   beforeAll(async () => {
-    app = await buildApp()
+    app = await buildApp({ repositories: noRepositories })
   })
 
   afterAll(async () => {

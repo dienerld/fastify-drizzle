@@ -18,9 +18,6 @@ const envSchema = z.object({
   ACCESS_KEY: z.string().min(1),
   JWT_EXPIRATION: z.string().optional(),
 
-  // db
-  DATABASE_URL: z.url(),
-
   // legacy: only used by src/cache/cache.ts (removed in phase 3)
   REDIS_URL: z.url().optional(),
 })
@@ -44,7 +41,6 @@ function loadEnv() {
       accessKey: e.ACCESS_KEY,
       jwtExpiration: e.JWT_EXPIRATION,
     },
-    db: { url: e.DATABASE_URL },
     redis: { url: e.REDIS_URL },
   }
 }

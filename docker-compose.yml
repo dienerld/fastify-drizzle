@@ -1,18 +1,67 @@
 name: fastify-api-template
 
+# Start only the databases you need:
+#   docker compose --profile postgres up -d --wait
+#   docker compose --profile mongo up -d --wait
+#   docker compose --profile redis up -d --wait
 services:
-  pg:
-    image: postgres:13-alpine
+  postgres:
+    profiles: [postgres]
+    image: postgres:18-alpine
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
-      - POSTGRES_USER=docker
-      - POSTGRES_PASSWORD=docker
-      - POSTGRES_DB=app
-      - TZ=America/Sao_Paulo
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: app
+      TZ: America/Sao_Paulo
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docker -d app"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Single-node replica set (needed for transactions). mongod listens on 27018
+  # inside AND outside the container so the host in the replica set config
+  # (localhost:27018) is reachable from your machine with `?replicaSet=rs0`.
+  mongo:
+    profiles: [mongo]
+    image: mongo:8
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27018"]
+    ports:
+      - "27018:27018"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --port
+        - "27018"
+        - --quiet
+        - --eval
+        - "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27018' }] }).ok }"
+      interval: 3s
+      timeout: 10s
+      retries: 20
+      start_period: 5s
+
+  redis:
+    profiles: [redis]
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
 volumes:
-  pg-data:
-    driver: local
+  postgres-data:
+  mongo-data:
+  redis-data:

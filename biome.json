@@ -30,7 +30,7 @@
       "*.ts",
       "*.json",
       "!**/node_modules",
-      "!src/db/_migrations",
+      "!src/infra/db/postgres/migrations",
       "!dist"
     ]
   }
