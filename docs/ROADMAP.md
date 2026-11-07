@@ -124,7 +124,9 @@ Cada fase termina com o comando de verificação passando e um commit (Conventio
 - `.env.example` completo e comentado.
 - **Pronto quando:** um agente novo, lendo só o `AGENTS.md`, cria um módulo de teste com o gerador e o `pnpm check` passa no template; e, seguindo só a seção "Escolhendo o banco" do README, remove um dos bancos numa cópia do repositório com o `pnpm check` passando e o `grep` de sobras vazio (fazer o teste uma vez para cada banco).
 
-### Fase 5: Build, container, CI e README
+### Fase 5: Endurecimento, build, container, CI e README
+- **Rate limit** com `@fastify/rate-limit` (última versão): limite global moderado e limite mais estrito em `/auth/*` (por IP; no refresh/logout também por token). Store em memória por padrão; usa o Redis de `src/infra/cache/` quando configurado (para várias instâncias). Valores por env com defaults; resposta 429 no formato padrão de erro; `trustProxy` configurável por env para pegar o IP real atrás de proxy. Testes: estouro do limite em `/auth/google` e `/auth/refresh` devolve 429; rotas normais não são afetadas no uso comum.
+- **Limpeza de refresh tokens** expirados e revogados: método `deleteExpired(before)` no `RefreshTokenRepository` (contrato nos dois bancos). No Mongo, índice TTL em `expiresAt` (e remoção dos revogados após um período de retenção). No Postgres, limpeza periódica dentro do processo (`setInterval` com `unref`, intervalo por env, parada no desligamento gracioso) e script `pnpm tokens:cleanup` para quem preferir cron externo. Manter os revogados por um período curto configurável (para a detecção de reuso continuar funcionando). Documentar em `auth.md`.
 - Dockerfile multi-stage de produção (pnpm via `packageManager`, build com tsdown → imagem enxuta, usuário não-root, `HEALTHCHECK`); dev pelo devcontainer.
 - Devcontainer atualizado (sem rede externa obrigatória; Node 24; pnpm atual; extensão do Biome).
 - GitHub Actions: `check` em todo PR com matriz `postgres`/`mongo`. Sem deploy (fica para cada projeto).
@@ -132,7 +134,7 @@ Cada fase termina com o comando de verificação passando e um commit (Conventio
   - por que o template traz os dois e por que o projeto final deve ficar com um só;
   - checklist "Ficar com Postgres" e checklist "Ficar com Mongo": pastas e padrões de arquivo a apagar (`src/infra/db/<outro>/`, `**/*.<outro>.ts`, `**/*.<outro>.test.ts`), ajuste de `src/infra/db/index.ts`, `pnpm remove` das dependências, serviço do compose, scripts do `package.json`, variáveis do `.env.example`, matriz do CI, trechos do `AGENTS.md`/docs e a própria seção do README;
   - comando de conferência de sobras (ex.: `grep -rniE "mongo|drizzle|postgres" --exclude-dir=node_modules .`, ajustado ao banco removido) e `pnpm install && pnpm check` no fim.
-- **Pronto quando:** CI verde nos dois bancos; a imagem sobe e responde `/health`; a seção "Escolhendo o banco" foi seguida à risca para cada banco numa cópia e funcionou.
+- **Pronto quando:** rate limit e limpeza de tokens testados nos dois bancos; CI verde nos dois bancos; a imagem sobe e responde `/health`; a seção "Escolhendo o banco" foi seguida à risca para cada banco numa cópia e funcionou.
 
 ## Riscos
 
