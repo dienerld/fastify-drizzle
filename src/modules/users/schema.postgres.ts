@@ -2,11 +2,9 @@ import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  fullName: text('full_name').notNull(),
-  firstName: text('first_name').notNull(),
-  lastName: text('last_name').notNull(),
   email: text('email').notNull(),
-  externalId: text('external_id').notNull().unique(),
+  name: text('name').notNull(),
+  googleSub: text('google_sub').notNull().unique(),
   picture: text('picture'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

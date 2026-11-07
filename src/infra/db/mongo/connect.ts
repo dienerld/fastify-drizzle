@@ -1,3 +1,4 @@
+import { createRefreshTokenRepositoryMongo } from '~/modules/auth/repository.mongo'
 import { createTodoRepositoryMongo } from '~/modules/todo/repository.mongo'
 import { createUserRepositoryMongo } from '~/modules/users/repository.mongo'
 import type { Database } from '../../repositories'
@@ -12,6 +13,7 @@ export async function connect(env: MongoEnv): Promise<Database> {
     repositories: {
       users: createUserRepositoryMongo(conn),
       todos: createTodoRepositoryMongo(conn),
+      refreshTokens: createRefreshTokenRepositoryMongo(conn),
     },
     close: () => conn.close(),
   }

@@ -105,7 +105,13 @@ describe('docs', () => {
     const doc = spec.json()
     expect(doc.info.title).toBe('fastify-api-template')
     expect(Object.keys(doc.paths)).toEqual(
-      expect.arrayContaining(['/', '/health', '/users', '/todos'])
+      expect.arrayContaining([
+        '/',
+        '/health',
+        '/auth/google',
+        '/users/me',
+        '/todos',
+      ])
     )
     const ui = await app.inject({ method: 'GET', url: '/docs/' })
     expect(ui.statusCode).toBe(200)

@@ -24,6 +24,8 @@ export const routeSchema = ({
   ...docs
 }: RouteDocs) => ({
   ...docs,
+  // OpenAPI: documents the bearer scheme registered in `app.ts`
+  ...(isProtected ? { security: [{ bearerAuth: [] }] } : {}),
   response: {
     [status]: response,
     400: errorResponseSchema,

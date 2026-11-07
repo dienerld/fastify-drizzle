@@ -9,7 +9,7 @@ const opened: Database[] = []
 describeTodoRepositoryContract(async () => {
   const db = await emptyPostgres()
   opened.push(db)
-  return db.repositories.todos
+  return db.repositories
 })
 
 afterAll(async () => {

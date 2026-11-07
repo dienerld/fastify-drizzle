@@ -14,4 +14,5 @@ const unusable = (repo: string) =>
 export const noRepositories = {
   users: unusable('users'),
   todos: unusable('todos'),
+  refreshTokens: unusable('refreshTokens'),
 } as Repositories

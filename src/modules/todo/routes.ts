@@ -31,6 +31,10 @@ const tags = ['todos']
 export const todoRoutes: FastifyPluginAsyncZod<{
   todos: TodoRepository
 }> = async (app, { todos }) => {
+  // Every route of this plugin requires a valid access token and works only
+  // on the caller's own todos. Added as a hook so new routes can't forget it.
+  app.addHook('onRequest', app.authenticate)
+
   const service = createTodoService(todos)
 
   app.get(
@@ -40,12 +44,13 @@ export const todoRoutes: FastifyPluginAsyncZod<{
         operationId: 'listTodos',
         summary: 'List',
         description: 'List todos, newest first',
+        protected: true,
         tags,
         response: z.array(todoSchema),
       }),
     },
-    async () => {
-      const result = await service.list()
+    async request => {
+      const result = await service.list(request.user.id)
       if (!result.ok) throw toHttpError(result.error)
       return result.value
     }
@@ -60,6 +65,7 @@ export const todoRoutes: FastifyPluginAsyncZod<{
           operationId: 'getTodo',
           summary: 'Get',
           description: 'Get a todo by id',
+          protected: true,
           tags,
           notFound: true,
           response: todoSchema,
@@ -67,7 +73,7 @@ export const todoRoutes: FastifyPluginAsyncZod<{
       },
     },
     async request => {
-      const result = await service.get(request.params.id)
+      const result = await service.get(request.user.id, request.params.id)
       if (!result.ok) throw toHttpError(result.error)
       return result.value
     }
@@ -83,13 +89,14 @@ export const todoRoutes: FastifyPluginAsyncZod<{
           summary: 'Create',
           description: 'Create a todo',
           status: 201,
+          protected: true,
           tags,
           response: todoSchema,
         }),
       },
     },
     async (request, reply) => {
-      const result = await service.create(request.body)
+      const result = await service.create(request.user.id, request.body)
       if (!result.ok) throw toHttpError(result.error)
       return reply.status(201).send(result.value)
     }
@@ -105,6 +112,7 @@ export const todoRoutes: FastifyPluginAsyncZod<{
           operationId: 'updateTodo',
           summary: 'Update',
           description: 'Partially update a todo',
+          protected: true,
           tags,
           notFound: true,
           response: todoSchema,
@@ -112,7 +120,11 @@ export const todoRoutes: FastifyPluginAsyncZod<{
       },
     },
     async request => {
-      const result = await service.update(request.params.id, request.body)
+      const result = await service.update(
+        request.user.id,
+        request.params.id,
+        request.body
+      )
       if (!result.ok) throw toHttpError(result.error)
       return result.value
     }
@@ -128,6 +140,7 @@ export const todoRoutes: FastifyPluginAsyncZod<{
           summary: 'Delete',
           description: 'Delete a todo',
           status: 204,
+          protected: true,
           tags,
           notFound: true,
           response: z.null(),
@@ -135,7 +148,7 @@ export const todoRoutes: FastifyPluginAsyncZod<{
       },
     },
     async (request, reply) => {
-      const result = await service.remove(request.params.id)
+      const result = await service.remove(request.user.id, request.params.id)
       if (!result.ok) throw toHttpError(result.error)
       return reply.status(204).send(null)
     }

@@ -166,15 +166,9 @@ importers:
 
   .:
     dependencies:
-      '@fastify/cookie':
-        specifier: ^11.1.5
-        version: 11.1.5
       '@fastify/cors':
         specifier: 11.4.1
         version: 11.4.1
-      '@fastify/session':
-        specifier: ^11.1.6
-        version: 11.1.6
       '@fastify/swagger':
         specifier: ^9.9.3
         version: 9.9.3
@@ -197,11 +191,11 @@ importers:
         specifier: 7.0.0
         version: 7.0.0(@fastify/swagger@9.9.3)(fastify@5.12.8)(openapi-types@12.1.3)(zod@4.6.7)
       ioredis:
-        specifier: ^5.4.1
-        version: 5.4.1
-      jsonwebtoken:
-        specifier: ^9.0.2
-        version: 9.0.2
+        specifier: ^6.0.0
+        version: 6.0.0
+      jose:
+        specifier: ^6.2.15
+        version: 6.2.15
       mongoose:
         specifier: ^9.12.0
         version: 9.12.0
@@ -215,9 +209,6 @@ importers:
       '@biomejs/biome':
         specifier: 2.6.6
         version: 2.6.6
-      '@types/jsonwebtoken':
-        specifier: ^9.0.7
-        version: 9.0.7
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
@@ -775,9 +766,6 @@ packages:
   '@fastify/ajv-compiler@4.0.7':
     resolution: {integrity: sha512-VP0yIfwlc1ohj733keYDqyHm1VWeP9VQxYomunhr90jkC4aNNibbkrRiaNgPgqj1ORxUenILR4qzA/ppYBNAtQ==}
 
-  '@fastify/cookie@11.1.5':
-    resolution: {integrity: sha512-hs7e0otf7n/lJMpt63EFdQb5/u8kO6DeexEtLPVTybSdItC6SwJ1O0vtTyWvKNR70LZcHLlsUr/y3jFpqtyWRA==}
-
   '@fastify/cors@11.4.1':
     resolution: {integrity: sha512-WuPATGGyc3YzpOfumovBJ4xC2RPBBFyDFElwldFRBCgM2G27xH9DnXTho9+nc2Ho6gLD1hKTetdOntR+G38+7A==}
 
@@ -802,14 +790,11 @@ packages:
   '@fastify/proxy-addr@5.1.2':
     resolution: {integrity: sha512-uqB4QsgVoro0XDC+DIftIMGXHdBPn+lK6Ek3xXAIxPMCJfqxnbtyEoMCm2KPUVOuIosd7Cyw9HawEqMFM/UA+g==}
 
-  '@fastify/session@11.1.6':
-    resolution: {integrity: sha512-ggv3aRRQGPwPGLurZnKQiJu4cRa5Mnnf41gFeK9lo1tvaMFwqO70Nhx2tS/lREMdLZbwxBW2tRxVUaz0qMEguA==}
-
   '@fastify/swagger@9.9.3':
     resolution: {integrity: sha512-1whjjguZlh4VV6OP2SD7w7ZNXXuLPwLcxbKIu7GckhHGgCyIYwtOyBskc3TLZa7LsaRmZZRiB1nz/JTaCI5grQ==}
 
-  '@ioredis/commands@1.2.0':
-    resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
+  '@ioredis/commands@2.0.0':
+    resolution: {integrity: sha512-vrx0AE/T0h7cRZwfo1M39Cr+ZhZrkf0V8mQN75wucKCxCLD9l/VX6no3gFvrLqD1IlG/1LtzWovqEw3t0Vr9zg==}
 
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
@@ -1093,9 +1078,6 @@ packages:
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
 
-  '@types/jsonwebtoken@9.0.7':
-    resolution: {integrity: sha512-ugo316mmTYBl2g81zDFnZ7cfxlut3o+/EQdaP7J8QN2kY6lJ22hmQYCK5EHcJHbrW+dkCGSCPgbG8JtYj6qSrg==}
-
   '@types/node@24.19.2':
     resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
 
@@ -1298,9 +1280,6 @@ packages:
     resolution: {integrity: sha512-eb33j2Ha6xgygjJ8bhI3sYaI9cLAbSaopZLRJQ5/rxk32XyBSoVVcbeHIzVGJx1SyQpyyoElkoEZgQrg+RVVoA==}
     engines: {node: '>=20.19.0'}
 
-  buffer-equal-constant-time@1.0.1:
-    resolution: {integrity: sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==}
-
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
 
@@ -1312,23 +1291,28 @@ packages:
     resolution: {integrity: sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==}
     engines: {node: '>=18'}
 
-  cluster-key-slot@1.1.2:
-    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
+  cluster-key-slot@1.1.1:
+    resolution: {integrity: sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw==}
     engines: {node: '>=0.10.0'}
 
   cookie@0.6.0:
     resolution: {integrity: sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==}
     engines: {node: '>= 0.6'}
 
-  cookie@2.0.2:
-    resolution: {integrity: sha512-SL0cVuEdETEp7pN0FuZb01toc3vnODEfVUCooxG1SJN0yIirh7JMb9X9bvfCFf0vzzbT68RdbKDHYTiWy7a7iw==}
-    engines: {node: '>=22'}
-
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
   debug@4.3.7:
     resolution: {integrity: sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+
+  debug@4.4.3:
+    resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
     engines: {node: '>=6.0'}
     peerDependencies:
       supports-color: '*'
@@ -1459,9 +1443,6 @@ packages:
       oxc-resolver:
         optional: true
 
-  ecdsa-sig-formatter@1.0.11:
-    resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
-
   empathic@2.1.0:
     resolution: {integrity: sha512-AnfC1ATldl49/cvZdLPDjBfrRNwbDO05aibiOtzQu3qtlbJtomNLhF30HEtn/7iBz50dlMECqATo3fG0LrdEgw==}
     engines: {node: '>=14'}
@@ -1570,13 +1551,16 @@ packages:
     resolution: {integrity: sha512-vXoV9PjKHEednCUu01e98TkImxy67e3BJXbTIOmIq4Hyzw3IAwYRcuPkfeTzJzwyyts4kjuA73x+pWJLc4f86A==}
     engines: {node: ^22.18.0 || >=24.0.0}
 
-  ioredis@5.4.1:
-    resolution: {integrity: sha512-2YZsvl7jopIa1gaePkeMtd9rAcSjOOjPtpcLlOeusyO+XH2SK5ZcT+UCrElPP+WVIInh2TzeI4XW9ENaSLVVHA==}
-    engines: {node: '>=12.22.0'}
+  ioredis@6.0.0:
+    resolution: {integrity: sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==}
+    engines: {node: '>=20.0.0'}
 
   ipaddr.js@2.5.0:
     resolution: {integrity: sha512-aq+t5NAc+cS6rZQQVWC2x98CPqGtKKTMDd4Gaodv0wShnItdKg/51djkGJ1hqH+Oy0ivDftCbSLCQob8zso01w==}
     engines: {node: '>= 10'}
+
+  jose@6.2.15:
+    resolution: {integrity: sha512-qdF6ewcZARtef63fJ9AKKZPgxw+t7USH6HLXYcD4CrdmSvDp79rpJSPFEKc90QBeGS63u1KQtN2MZQHC0yDIzA==}
 
   json-schema-ref-resolver@1.0.1:
     resolution: {integrity: sha512-EJAj1pgHc1hxF6vo2Z3s69fMjO1INq6eGHXZ8Z6wCQeldCuwxGK9Sxf4/cScGn3FZubCVUehfWtcDM/PLteCQw==}
@@ -1590,16 +1574,6 @@ packages:
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
-
-  jsonwebtoken@9.0.2:
-    resolution: {integrity: sha512-PRp66vJ865SSqOlgqS8hujT5U4AOgMfhrwYIuIhfKaoSCZcirrmASQr8CX7cUg+RMih+hgznrjp99o+W4pJLHQ==}
-    engines: {node: '>=12', npm: '>=6'}
-
-  jwa@1.4.1:
-    resolution: {integrity: sha512-qiLX/xhEEFKUAJ6FiBMbes3w9ATzyk5W7Hvzpa/SLYdxNtng+gcurvrI7TbACjIXlsJyr05/S1oUhZrc63evQA==}
-
-  jws@3.2.2:
-    resolution: {integrity: sha512-YHlZCB6lMTllWDtSPHz/ZXTsi8S00usEV6v1tjq8tOUZzw7DpSDWVXjXDre6ed1w/pd495ODpHZYSdkRTsa0HA==}
 
   kareem@3.4.1:
     resolution: {integrity: sha512-UlgCAFNAdk/HLSsbfkmbH8pJqpEN52Ek8RG53Ys1i3Q3gbCQruSrWpplZlgIGyDHX/LNoLW97ei3OG43s7UhUA==}
@@ -1681,33 +1655,6 @@ packages:
   lightningcss@1.33.0:
     resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
     engines: {node: '>= 12.0.0'}
-
-  lodash.defaults@4.2.0:
-    resolution: {integrity: sha512-qjxPLHd3r5DnsdGacqOMU6pb/avJzdh9tFX2ymgoZE27BmjXrNy/y4LoaiTeAb+O3gL8AfpJGtqfX/ae2leYYQ==}
-
-  lodash.includes@4.3.0:
-    resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
-
-  lodash.isarguments@3.1.0:
-    resolution: {integrity: sha512-chi4NHZlZqZD18a0imDHnZPrDeBbTtVN7GXMwuGdRH9qotxAjYs3aVLKc7zNOG9eddR5Ksd8rvFEBc9SsggPpg==}
-
-  lodash.isboolean@3.0.3:
-    resolution: {integrity: sha512-Bz5mupy2SVbPHURB98VAcw+aHh4vRV5IPNhILUCsOzRmsTmSQ17jIuqopAentWoehktxGd9e/hbIXq980/1QJg==}
-
-  lodash.isinteger@4.0.4:
-    resolution: {integrity: sha512-DBwtEWN2caHQ9/imiNeEA5ys1JoRtRfY3d7V9wkqtbycnAmTvRRmbHKDV4a0EYc678/dia0jrte4tjYwVBaZUA==}
-
-  lodash.isnumber@3.0.3:
-    resolution: {integrity: sha512-QYqzpfwO3/CWf3XP+Z+tkQsfaLL/EnUlXWVkIk5FUPc4sBdTehEqZONuyRt2P67PXAk+NXmTBcc97zw9t1FQrw==}
-
-  lodash.isplainobject@4.0.6:
-    resolution: {integrity: sha512-oSXzaWypCMHkPC3NvBEaPHf0KsA5mvPrOPgQWDsbg8n7orZ290M0BmC/jgRZ4vcJ6DTAhjrsSYgdsW/F+MFOBA==}
-
-  lodash.isstring@4.0.1:
-    resolution: {integrity: sha512-0wJxfxH1wgO3GrbuP+dTTk7op+6L41QCXbGINEmD+ny/G/eCqGzxyCsh7159S+mgDDcoarnBw6PC1PS5+wUGgw==}
-
-  lodash.once@4.1.1:
-    resolution: {integrity: sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==}
 
   magic-string@1.4.5:
     resolution: {integrity: sha512-oLLC2+YvQUfAa+vxoufE/yc1icb87M9iXIRqAoR/2EhE/8cb3SF/+Gi0c2By1B+5Vz2e2vQtUvHiu1+63Znh+w==}
@@ -1833,10 +1780,6 @@ packages:
     resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
     engines: {node: '>=4'}
 
-  redis-parser@3.0.0:
-    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
-    engines: {node: '>=4'}
-
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
@@ -1886,9 +1829,6 @@ packages:
     resolution: {integrity: sha512-7j1jdVlzWzbRat9EDMsB/QmyMcc6hOO0vbcma8LGjBTmKlpS5Hem+5fpntc/HoRV5tLrG+Qo6I1ZHV/ZuL5S8g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
-
-  safe-buffer@5.2.1:
-    resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 
   safe-regex2@5.1.2:
     resolution: {integrity: sha512-tAtCGFPPP02VroDVzp4daGi6bC7jWG+41D47GKf18FeH/ubvKQHT9VmhAkvtjNOmJwqtApzWeUpEhkyEYULvmw==}
@@ -2455,11 +2395,6 @@ snapshots:
       ajv-formats: 3.0.1
       fast-uri: 4.2.3
 
-  '@fastify/cookie@11.1.5':
-    dependencies:
-      cookie: 2.0.2
-      fastify-plugin: 6.0.1
-
   '@fastify/cors@11.4.1':
     dependencies:
       fastify-plugin: 6.0.1
@@ -2488,11 +2423,6 @@ snapshots:
       '@fastify/forwarded': 3.1.2
       ipaddr.js: 2.5.0
 
-  '@fastify/session@11.1.6':
-    dependencies:
-      fastify-plugin: 6.0.1
-      safe-stable-stringify: 2.5.0
-
   '@fastify/swagger@9.9.3':
     dependencies:
       fastify-plugin: 6.0.1
@@ -2503,7 +2433,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@ioredis/commands@1.2.0': {}
+  '@ioredis/commands@2.0.0': {}
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
@@ -2694,10 +2624,6 @@ snapshots:
 
   '@types/estree@1.0.6': {}
 
-  '@types/jsonwebtoken@9.0.7':
-    dependencies:
-      '@types/node': 24.19.2
-
   '@types/node@24.19.2':
     dependencies:
       undici-types: 7.24.6
@@ -2821,23 +2747,23 @@ snapshots:
 
   bson@7.3.4: {}
 
-  buffer-equal-constant-time@1.0.1: {}
-
   buffer-from@1.1.2: {}
 
   cac@7.1.0: {}
 
   chai@6.3.0: {}
 
-  cluster-key-slot@1.1.2: {}
+  cluster-key-slot@1.1.1: {}
 
   cookie@0.6.0: {}
-
-  cookie@2.0.2: {}
 
   date-fns@4.1.0: {}
 
   debug@4.3.7:
+    dependencies:
+      ms: 2.1.3
+
+  debug@4.4.3:
     dependencies:
       ms: 2.1.3
 
@@ -2862,10 +2788,6 @@ snapshots:
       postgres: 4.1.0
 
   dts-resolver@3.0.0: {}
-
-  ecdsa-sig-formatter@1.0.11:
-    dependencies:
-      safe-buffer: 5.2.1
 
   empathic@2.1.0: {}
 
@@ -3054,21 +2976,20 @@ snapshots:
 
   import-without-cache@0.4.1: {}
 
-  ioredis@5.4.1:
+  ioredis@6.0.0:
     dependencies:
-      '@ioredis/commands': 1.2.0
-      cluster-key-slot: 1.1.2
-      debug: 4.3.7
+      '@ioredis/commands': 2.0.0
+      cluster-key-slot: 1.1.1
+      debug: 4.4.3
       denque: 2.1.0
-      lodash.defaults: 4.2.0
-      lodash.isarguments: 3.1.0
       redis-errors: 1.2.0
-      redis-parser: 3.0.0
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
 
   ipaddr.js@2.5.0: {}
+
+  jose@6.2.15: {}
 
   json-schema-ref-resolver@1.0.1:
     dependencies:
@@ -3087,30 +3008,6 @@ snapshots:
       - supports-color
 
   json-schema-traverse@1.0.0: {}
-
-  jsonwebtoken@9.0.2:
-    dependencies:
-      jws: 3.2.2
-      lodash.includes: 4.3.0
-      lodash.isboolean: 3.0.3
-      lodash.isinteger: 4.0.4
-      lodash.isnumber: 3.0.3
-      lodash.isplainobject: 4.0.6
-      lodash.isstring: 4.0.1
-      lodash.once: 4.1.1
-      ms: 2.1.3
-      semver: 7.6.3
-
-  jwa@1.4.1:
-    dependencies:
-      buffer-equal-constant-time: 1.0.1
-      ecdsa-sig-formatter: 1.0.11
-      safe-buffer: 5.2.1
-
-  jws@3.2.2:
-    dependencies:
-      jwa: 1.4.1
-      safe-buffer: 5.2.1
 
   kareem@3.4.1: {}
 
@@ -3168,24 +3065,6 @@ snapshots:
       lightningcss-linux-x64-musl: 1.33.0
       lightningcss-win32-arm64-msvc: 1.33.0
       lightningcss-win32-x64-msvc: 1.33.0
-
-  lodash.defaults@4.2.0: {}
-
-  lodash.includes@4.3.0: {}
-
-  lodash.isarguments@3.1.0: {}
-
-  lodash.isboolean@3.0.3: {}
-
-  lodash.isinteger@4.0.4: {}
-
-  lodash.isnumber@3.0.3: {}
-
-  lodash.isplainobject@4.0.6: {}
-
-  lodash.isstring@4.0.1: {}
-
-  lodash.once@4.1.1: {}
 
   magic-string@1.4.5:
     dependencies:
@@ -3286,10 +3165,6 @@ snapshots:
 
   redis-errors@1.2.0: {}
 
-  redis-parser@3.0.0:
-    dependencies:
-      redis-errors: 1.2.0
-
   require-from-string@2.0.2: {}
 
   resolve-pkg-maps@1.0.0: {}
@@ -3355,8 +3230,6 @@ snapshots:
       '@rolldown/binding-wasm32-wasi': 1.3.0
       '@rolldown/binding-win32-arm64-msvc': 1.3.0
       '@rolldown/binding-win32-x64-msvc': 1.3.0
-
-  safe-buffer@5.2.1: {}
 
   safe-regex2@5.1.2:
     dependencies:

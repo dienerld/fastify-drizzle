@@ -4,7 +4,7 @@ export type Result<T, E = ServiceError> =
   | { ok: false; error: E }
 
 export type ServiceError = {
-  code: 'not_found' | 'conflict'
+  code: 'not_found' | 'conflict' | 'unauthorized' | 'forbidden'
   message: string
 }
 
@@ -18,6 +18,8 @@ export const fail = <E = ServiceError>(error: E): Result<never, E> => ({
 const STATUS: Record<ServiceError['code'], number> = {
   not_found: 404,
   conflict: 409,
+  unauthorized: 401,
+  forbidden: 403,
 }
 
 /** Maps a service error to an Error with the matching HTTP `statusCode`. */

@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+import { parseDuration } from '~/utils/duration'
+
+const duration = z
+  .string()
+  .regex(/^\d+[smhd]$/, 'use a number and a unit: 30s, 15m, 12h or 30d')
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
@@ -14,12 +20,19 @@ const envSchema = z.object({
     .transform(value => value.split(',').map(origin => origin.trim())),
 
   // auth
-  SESSION_SECRET: z.string().min(32),
-  ACCESS_KEY: z.string().min(1),
-  JWT_EXPIRATION: z.string().optional(),
-
-  // legacy: only used by src/cache/cache.ts (removed in phase 3)
-  REDIS_URL: z.url().optional(),
+  JWT_SECRET: z.string().min(32),
+  ACCESS_TOKEN_TTL: duration.default('15m'),
+  REFRESH_TOKEN_TTL: duration.default('30d'),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  ALLOWED_EMAILS: z
+    .string()
+    .optional()
+    .transform(value =>
+      (value ?? '')
+        .split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(Boolean)
+    ),
 })
 
 function loadEnv() {
@@ -37,11 +50,13 @@ function loadEnv() {
     nodeEnv: e.NODE_ENV,
     http: { host: e.HOST, port: e.PORT, cors: e.CORS },
     auth: {
-      sessionSecret: e.SESSION_SECRET,
-      accessKey: e.ACCESS_KEY,
-      jwtExpiration: e.JWT_EXPIRATION,
+      jwtSecret: e.JWT_SECRET,
+      accessTokenTtlSeconds: parseDuration(e.ACCESS_TOKEN_TTL),
+      refreshTokenTtlSeconds: parseDuration(e.REFRESH_TOKEN_TTL),
+      googleClientId: e.GOOGLE_CLIENT_ID,
+      /** Empty means "everyone with a verified Google account". */
+      allowedEmails: e.ALLOWED_EMAILS,
     },
-    redis: { url: e.REDIS_URL },
   }
 }
 

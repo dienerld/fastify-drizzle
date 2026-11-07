@@ -5,8 +5,8 @@ const alias = { '~': fileURLToPath(new URL('./src', import.meta.url)) }
 
 const baseEnv = {
   NODE_ENV: 'test',
-  SESSION_SECRET: 'test-secret-with-at-least-32-characters!!',
-  ACCESS_KEY: 'test-access-key',
+  JWT_SECRET: 'test-secret-with-at-least-32-characters!!',
+  GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com',
 }
 
 // DB tests always target the `*_test` databases (never the dev one), even when
@@ -18,11 +18,14 @@ process.env.DATABASE_URL =
 process.env.MONGODB_URI =
   process.env.TEST_MONGODB_URI ?? 'mongodb://localhost:27018/?replicaSet=rs0'
 process.env.MONGODB_DB = 'app_test'
+process.env.REDIS_URL =
+  process.env.TEST_REDIS_URL ?? 'redis://localhost:6379/15'
 
 // Three projects, selected by file name (see docs/decisoes.md):
 //   unit     everything that does not need a database
 //   postgres *.postgres.test.ts (real Postgres, `pnpm db:up:postgres`)
 //   mongo    *.mongo.test.ts    (real MongoDB,  `pnpm db:up:mongo`)
+//   redis    *.redis.test.ts    (real Redis,    `pnpm db:up:redis`)
 // Tests use their own databases (`*_test`), never the dev one.
 export default defineConfig({
   resolve: { alias },
@@ -33,7 +36,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: ['src/**/*.test.ts'],
-          exclude: ['src/**/*.{postgres,mongo}.test.ts'],
+          exclude: ['src/**/*.{postgres,mongo,redis}.test.ts'],
           env: baseEnv,
         },
       },
@@ -52,6 +55,15 @@ export default defineConfig({
         test: {
           name: 'mongo',
           include: ['src/**/*.mongo.test.ts'],
+          fileParallelism: false,
+          env: baseEnv,
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          name: 'redis',
+          include: ['src/**/*.redis.test.ts'],
           fileParallelism: false,
           env: baseEnv,
         },

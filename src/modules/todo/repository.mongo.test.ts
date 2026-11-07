@@ -9,7 +9,7 @@ const opened: Database[] = []
 describeTodoRepositoryContract(async () => {
   const db = await emptyMongo()
   opened.push(db)
-  return db.repositories.todos
+  return db.repositories
 })
 
 afterAll(async () => {

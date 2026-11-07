@@ -9,7 +9,9 @@ export async function emptyPostgres() {
   const env = loadEnv()
   const { db, sql: client } = createClient(env)
   try {
-    await db.execute(sql`truncate table todos, users restart identity cascade`)
+    await db.execute(
+      sql`truncate table refresh_tokens, todos, users restart identity cascade`
+    )
   } finally {
     await client.end({ timeout: 5 })
   }

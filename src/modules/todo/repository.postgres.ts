@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 
 import type { PostgresDb } from '~/infra/db/postgres/client'
 import { isUuid } from '~/infra/db/postgres/uuid'
@@ -7,6 +7,7 @@ import { type TodoRow, todos } from './schema.postgres'
 
 const toDomain = (row: TodoRow) => ({
   id: row.id,
+  userId: row.userId,
   title: row.title,
   description: row.description,
   completed: row.completed,
@@ -14,23 +15,32 @@ const toDomain = (row: TodoRow) => ({
   updatedAt: row.updatedAt,
 })
 
+const owned = (userId: string, id: string) =>
+  and(eq(todos.userId, userId), eq(todos.id, id))
+
 export function createTodoRepositoryPostgres(db: PostgresDb): TodoRepository {
   return {
-    async list() {
-      const rows = await db.select().from(todos).orderBy(desc(todos.createdAt))
+    async list(userId) {
+      if (!isUuid(userId)) return []
+      const rows = await db
+        .select()
+        .from(todos)
+        .where(eq(todos.userId, userId))
+        .orderBy(desc(todos.createdAt))
       return rows.map(toDomain)
     },
 
-    async get(id) {
-      if (!isUuid(id)) return null
-      const [row] = await db.select().from(todos).where(eq(todos.id, id))
+    async get(userId, id) {
+      if (!isUuid(userId) || !isUuid(id)) return null
+      const [row] = await db.select().from(todos).where(owned(userId, id))
       return row ? toDomain(row) : null
     },
 
-    async create(input) {
+    async create(userId, input) {
       const [row] = await db
         .insert(todos)
         .values({
+          userId,
           title: input.title,
           description: input.description ?? null,
           completed: input.completed ?? false,
@@ -39,21 +49,21 @@ export function createTodoRepositoryPostgres(db: PostgresDb): TodoRepository {
       return toDomain(row as TodoRow)
     },
 
-    async update(id, patch) {
-      if (!isUuid(id)) return null
+    async update(userId, id, patch) {
+      if (!isUuid(userId) || !isUuid(id)) return null
       const [row] = await db
         .update(todos)
         .set({ ...definedOnly(patch), updatedAt: new Date() })
-        .where(eq(todos.id, id))
+        .where(owned(userId, id))
         .returning()
       return row ? toDomain(row) : null
     },
 
-    async delete(id) {
-      if (!isUuid(id)) return false
+    async delete(userId, id) {
+      if (!isUuid(userId) || !isUuid(id)) return false
       const rows = await db
         .delete(todos)
-        .where(eq(todos.id, id))
+        .where(owned(userId, id))
         .returning({ id: todos.id })
       return rows.length > 0
     },

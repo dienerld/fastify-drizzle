@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { NewUser, UserRepository } from './repository'
+import type { GoogleProfile, UserRepository } from './repository'
 
-const input: NewUser = {
-  fullName: 'Ada Lovelace',
-  firstName: 'Ada',
-  lastName: 'Lovelace',
+const profile: GoogleProfile = {
+  googleSub: 'google-sub-1',
   email: 'ada@example.com',
-  externalId: 'ext-1',
+  name: 'Ada Lovelace',
 }
 
 /**
@@ -24,38 +22,62 @@ export function describeUserRepositoryContract(
       repo = await makeRepo()
     })
 
-    it('creates a user with null picture by default', async () => {
-      const user = await repo.create(input)
-      expect(user).toMatchObject({ ...input, picture: null })
+    it('upsert creates a user with null picture by default', async () => {
+      const user = await repo.upsertByGoogleSub(profile)
+      expect(user).toMatchObject({ ...profile, picture: null })
       expect(typeof user.id).toBe('string')
       expect(user.createdAt).toBeInstanceOf(Date)
     })
 
-    it('stores the picture when given', async () => {
-      const user = await repo.create({ ...input, picture: 'http://p/1.png' })
+    it('upsert stores the picture when given', async () => {
+      const user = await repo.upsertByGoogleSub({
+        ...profile,
+        picture: 'http://p/1.png',
+      })
       expect(user.picture).toBe('http://p/1.png')
     })
 
-    it('finds by id and by external id', async () => {
-      const user = await repo.create(input)
-      expect(await repo.findById(user.id)).toEqual(user)
-      expect(await repo.findByExternalId('ext-1')).toEqual(user)
+    it('upsert on the same googleSub updates the profile and keeps the id', async () => {
+      const first = await repo.upsertByGoogleSub(profile)
+      const second = await repo.upsertByGoogleSub({
+        ...profile,
+        email: 'new@example.com',
+        name: 'Ada B.',
+        picture: 'http://p/2.png',
+      })
+      expect(second.id).toBe(first.id)
+      expect(second.createdAt).toEqual(first.createdAt)
+      expect(second).toMatchObject({
+        email: 'new@example.com',
+        name: 'Ada B.',
+        picture: 'http://p/2.png',
+      })
     })
 
-    it('returns null for unknown or malformed ids and external ids', async () => {
+    it('concurrent upserts of the same googleSub create a single user', async () => {
+      const users = await Promise.all(
+        Array.from({ length: 5 }, () => repo.upsertByGoogleSub(profile))
+      )
+      expect(new Set(users.map(u => u.id)).size).toBe(1)
+    })
+
+    it('different googleSubs are different users', async () => {
+      const a = await repo.upsertByGoogleSub(profile)
+      const b = await repo.upsertByGoogleSub({ ...profile, googleSub: 'other' })
+      expect(a.id).not.toBe(b.id)
+    })
+
+    it('finds by id', async () => {
+      const user = await repo.upsertByGoogleSub(profile)
+      expect(await repo.findById(user.id)).toEqual(user)
+    })
+
+    it('returns null for unknown or malformed ids', async () => {
       expect(await repo.findById('507f1f77bcf86cd799439011')).toBeNull()
       expect(
         await repo.findById('00000000-0000-4000-8000-000000000000')
       ).toBeNull()
       expect(await repo.findById('not-an-id')).toBeNull()
-      expect(await repo.findByExternalId('missing')).toBeNull()
-    })
-
-    it('rejects a duplicate external id', async () => {
-      await repo.create(input)
-      await expect(
-        repo.create({ ...input, email: 'b@x.com' })
-      ).rejects.toThrow()
     })
   })
 }

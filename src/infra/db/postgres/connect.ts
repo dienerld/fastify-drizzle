@@ -1,3 +1,4 @@
+import { createRefreshTokenRepositoryPostgres } from '~/modules/auth/repository.postgres'
 import { createTodoRepositoryPostgres } from '~/modules/todo/repository.postgres'
 import { createUserRepositoryPostgres } from '~/modules/users/repository.postgres'
 import type { Database } from '../../repositories'
@@ -11,6 +12,7 @@ export async function connect(env: PostgresEnv): Promise<Database> {
     repositories: {
       users: createUserRepositoryPostgres(db),
       todos: createTodoRepositoryPostgres(db),
+      refreshTokens: createRefreshTokenRepositoryPostgres(db),
     },
     close: () => sql.end({ timeout: 5 }),
   }

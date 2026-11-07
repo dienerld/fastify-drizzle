@@ -7,11 +7,9 @@ type Lean = UserDoc & { _id: Types.ObjectId }
 
 const toDomain = (doc: Lean): User => ({
   id: doc._id.toHexString(),
-  fullName: doc.fullName,
-  firstName: doc.firstName,
-  lastName: doc.lastName,
   email: doc.email,
-  externalId: doc.externalId,
+  name: doc.name,
+  googleSub: doc.googleSub,
   picture: doc.picture,
   createdAt: doc.createdAt,
 })
@@ -29,17 +27,28 @@ export function createUserRepositoryMongo(conn: Connection): UserRepository {
       return doc ? toDomain(doc) : null
     },
 
-    async findByExternalId(externalId) {
-      const doc = await Users.findOne({ externalId }).lean<Lean>()
-      return doc ? toDomain(doc) : null
-    },
-
-    async create(input) {
-      const doc = await Users.create({
-        ...input,
-        picture: input.picture ?? null,
-      })
-      return toDomain(doc.toObject() as Lean)
+    async upsertByGoogleSub(profile) {
+      const run = () =>
+        Users.findOneAndUpdate(
+          { googleSub: profile.googleSub },
+          {
+            $set: {
+              email: profile.email,
+              name: profile.name,
+              picture: profile.picture ?? null,
+            },
+          },
+          { upsert: true, returnDocument: 'after', runValidators: true }
+        ).lean<Lean>()
+      let doc: Lean | null
+      try {
+        doc = await run()
+      } catch (err) {
+        // two concurrent upserts can race on the unique index: retry once
+        if ((err as { code?: number }).code !== 11000) throw err
+        doc = await run()
+      }
+      return toDomain(doc as Lean)
     },
   }
 }

@@ -1,5 +1,6 @@
 export type Todo = {
   id: string
+  userId: string
   title: string
   description: string | null
   completed: boolean
@@ -15,15 +16,18 @@ export type NewTodo = {
 
 export type TodoPatch = Partial<NewTodo>
 
-// Not user-scoped yet: ownership (userId) arrives with the auth module (phase 3).
+/**
+ * Every method is scoped by `userId`: a todo that belongs to someone else is
+ * indistinguishable from a missing one (`null` / `false`), so it can never leak.
+ */
 export interface TodoRepository {
   /** Newest first. */
-  list(): Promise<Todo[]>
-  /** Returns `null` when the id is unknown or malformed. */
-  get(id: string): Promise<Todo | null>
-  create(input: NewTodo): Promise<Todo>
-  /** Returns `null` when the id is unknown or malformed. */
-  update(id: string, patch: TodoPatch): Promise<Todo | null>
+  list(userId: string): Promise<Todo[]>
+  /** Returns `null` when the id is unknown, malformed or not the user's. */
+  get(userId: string, id: string): Promise<Todo | null>
+  create(userId: string, input: NewTodo): Promise<Todo>
+  /** Returns `null` when the id is unknown, malformed or not the user's. */
+  update(userId: string, id: string, patch: TodoPatch): Promise<Todo | null>
   /** Returns whether something was deleted. */
-  delete(id: string): Promise<boolean>
+  delete(userId: string, id: string): Promise<boolean>
 }

@@ -1,9 +1,110 @@
 {
-  "id": "19f86e5e-eb40-49bd-8e0c-397e2ba0eabe",
+  "id": "2dfeae8e-eb35-4fa1-86d7-11d6a9c27561",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.refresh_tokens": {
+      "name": "refresh_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "family_id": {
+          "name": "family_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "replaced_by_id": {
+          "name": "replaced_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "refresh_tokens_family_id_idx": {
+          "name": "refresh_tokens_family_id_idx",
+          "columns": [
+            {
+              "expression": "family_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "refresh_tokens_user_id_users_id_fk": {
+          "name": "refresh_tokens_user_id_users_id_fk",
+          "tableFrom": "refresh_tokens",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "refresh_tokens_token_hash_unique": {
+          "name": "refresh_tokens_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.todos": {
       "name": "todos",
       "schema": "",
@@ -14,6 +115,12 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
         },
         "title": {
           "name": "title",
@@ -49,8 +156,44 @@
           "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "todos_user_id_created_at_idx": {
+          "name": "todos_user_id_created_at_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "todos_user_id_users_id_fk": {
+          "name": "todos_user_id_users_id_fk",
+          "tableFrom": "todos",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -68,32 +211,20 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "full_name": {
-          "name": "full_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "first_name": {
-          "name": "first_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_name": {
-          "name": "last_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "email": {
           "name": "email",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "external_id": {
-          "name": "external_id",
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "google_sub": {
+          "name": "google_sub",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -123,11 +254,11 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "users_external_id_unique": {
-          "name": "users_external_id_unique",
+        "users_google_sub_unique": {
+          "name": "users_google_sub_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "external_id"
+            "google_sub"
           ]
         }
       },

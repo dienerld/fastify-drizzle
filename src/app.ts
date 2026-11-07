@@ -1,6 +1,4 @@
-import fastifyCookie from '@fastify/cookie'
 import fastifyCors from '@fastify/cors'
-import fastifySession from '@fastify/session'
 import fastifySwagger from '@fastify/swagger'
 import scalarApiReference from '@scalar/fastify-api-reference'
 import fastify from 'fastify'
@@ -10,18 +8,37 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod'
+import type { JWTVerifyGetKey } from 'jose'
 import { env } from '~/env'
 import { rootRouter } from '~/http/routes/root'
+import type { Cache } from '~/infra/cache'
 import type { Repositories } from '~/infra/repositories'
+import { createGoogleVerifier, googleRemoteKeys } from '~/modules/auth/google'
+import { authPlugin } from '~/modules/auth/plugin'
+import { authRoutes } from '~/modules/auth/routes'
+import { createAccessTokens } from '~/modules/auth/tokens'
 import { todoRoutes } from '~/modules/todo/routes'
 import { usersRoutes } from '~/modules/users/routes'
 import { registerErrorHandlers } from '~/utils/error-handler'
 import pkg from '../package.json' with { type: 'json' }
 
 /** Composition root: everything the app needs from outside comes in here. */
-export type AppDeps = { repositories: Repositories }
+export type AppDeps = {
+  repositories: Repositories
+  /**
+   * Optional generic cache (Redis). When omitted the app runs without it and
+   * `/health` does not report a cache. Nothing in the template requires it.
+   */
+  cache?: Cache
+  /** Overrides for tests; defaults come from `env`. */
+  auth?: {
+    /** Keys that verify Google ID tokens. Tests pass a local JWKS (no network). */
+    googleKeys?: JWTVerifyGetKey
+    allowedEmails?: string[]
+  }
+}
 
-export async function buildApp({ repositories }: AppDeps) {
+export async function buildApp({ repositories, cache, auth }: AppDeps) {
   const app = fastify({
     logger:
       env.nodeEnv === 'test'
@@ -35,8 +52,6 @@ export async function buildApp({ repositories }: AppDeps) {
   registerErrorHandlers(app)
 
   await app.register(fastifyCors, { origin: env.http.cors })
-  await app.register(fastifyCookie)
-  await app.register(fastifySession, { secret: env.auth.sessionSecret })
   await app.register(fastifySwagger, {
     openapi: {
       info: {
@@ -44,12 +59,38 @@ export async function buildApp({ repositories }: AppDeps) {
         version: pkg.version,
       },
       servers: [],
+      components: {
+        securitySchemes: {
+          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        },
+      },
     },
     transform: jsonSchemaTransform,
   })
   await app.register(scalarApiReference, { routePrefix: '/docs' })
 
-  await app.register(rootRouter, { prefix: '/' })
+  const accessTokens = createAccessTokens({
+    secret: env.auth.jwtSecret,
+    ttlSeconds: env.auth.accessTokenTtlSeconds,
+  })
+  await app.register(authPlugin, { accessTokens })
+
+  await app.register(rootRouter, { prefix: '/', cache })
+  await app.register(authRoutes, {
+    prefix: '/auth',
+    auth: {
+      users: repositories.users,
+      refreshTokens: repositories.refreshTokens,
+      accessTokens,
+      verifyGoogle: createGoogleVerifier({
+        clientId: env.auth.googleClientId,
+        keys: auth?.googleKeys ?? googleRemoteKeys(),
+      }),
+      accessTokenTtlSeconds: env.auth.accessTokenTtlSeconds,
+      refreshTokenTtlSeconds: env.auth.refreshTokenTtlSeconds,
+      allowedEmails: auth?.allowedEmails ?? env.auth.allowedEmails,
+    },
+  })
   await app.register(usersRoutes, {
     prefix: '/users',
     users: repositories.users,
