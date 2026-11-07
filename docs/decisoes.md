@@ -1,6 +1,6 @@
 # Decisões
 
-Por que o template é como é, organizado por tema. A história por fase está no `ROADMAP.md`; aqui fica o motivo de cada escolha. No fim, as **checklists que alimentam o README** (Fase 5).
+Por que o template é como é, organizado por tema. A história por fase está no `ROADMAP.md`; aqui fica o motivo de cada escolha.
 
 ## Sumário
 
@@ -14,11 +14,12 @@ Por que o template é como é, organizado por tema. A história por fase está n
 8. [Fronteiras automáticas e preparo para agentes](#8-fronteiras-automáticas-e-preparo-para-agentes)
 9. [Ambiente desta máquina](#9-ambiente-desta-máquina)
 10. [Em aberto](#10-em-aberto)
-11. [Checklists para o README (Fase 5)](#11-checklists-para-o-readme-fase-5)
+11. [Checklists para o README](#11-checklists-para-o-readme)
+12. [Fase 5: rate limit, limpeza de tokens, Docker, CI](#12-fase-5-rate-limit-limpeza-de-tokens-docker-ci)
 
 ## 1. Ferramentas e build
 
-- **Versões: sempre a última estável** (`pnpm add <pkg>@latest`). Referência atual: TypeScript 7.0.2, Fastify 5.12.8, Zod 4.6.7, fastify-type-provider-zod 7.0.0, @fastify/swagger 9.9.3, @scalar/fastify-api-reference 1.77, fastify-plugin 6, drizzle-orm 0.45.4, drizzle-kit 0.31.11, postgres 4.1.0, mongoose 9.12.0, jose 6.2.15, ioredis 6.0.0, Biome 2.6.6, vitest 5.1, husky 9.1.7, lint-staged 17.6, commitlint 21.2, dependency-cruiser 18.7.
+- **Versões: sempre a última estável** (`pnpm add <pkg>@latest`). Referência atual: TypeScript 7.0.2, Fastify 5.12.8, Zod 4.6.7, fastify-type-provider-zod 7.0.0, @fastify/swagger 9.9.3, @fastify/rate-limit 11.2.2, @scalar/fastify-api-reference 1.77, fastify-plugin 6, drizzle-orm 0.45.4, drizzle-kit 0.31.11, postgres 4.1.0, mongoose 9.12.0, jose 6.2.15, ioredis 6.0.0, Biome 2.6.6, vitest 5.1, husky 9.1.7, lint-staged 17.6, commitlint 21.2, dependency-cruiser 18.7.
 - **TypeScript 7 mantido.** `tsc --noEmit`, tsx, vitest 5 e tsdown funcionam. O TS 7 removeu `baseUrl`; o alias `~/*` usa só `paths`. O build não gera `.d.ts` (é uma API, não uma lib).
 - **`module: esnext` + `moduleResolution: bundler`**: o código é empacotado pelo tsdown, então imports relativos/alias ficam sem extensão. tsdown com `fixedExtension: false` emite `dist/index.js` (o padrão seria `.mjs`), mantendo `node dist/index.js`.
 - **Sem `@fastify/autoload`**: o bundle único (`src/index.ts` → `dist/index.js`) não tem `modules/` em runtime; os módulos são registrados explicitamente em `buildApp()`.
@@ -105,40 +106,18 @@ O Docker aqui não cria redes bridge (módulo `veth` ausente no kernel em uso). 
 
 ## 10. Em aberto
 
-- (feito na Fase 5) Rate limit em `/auth/*` e limpeza de refresh tokens: ver `docs/auth.md`.
 - `GET /auth/*` para fluxo web (hoje só mobile/SPA com ID token).
 - Revogar todas as sessões de um usuário.
 - O access token não é revogável antes de expirar (stateless por decisão).
 
-## 11. Checklists para o README (Fase 5)
+## 11. Checklists para o README
 
-> Material para a seção "Escolhendo o banco" e para "Remover o Redis" do README. Mantenha atualizado: toda mudança que adicione arquivo, dependência, variável ou script de banco/Redis entra aqui (regra do `AGENTS.md`).
+Movidas para o `README.md` (seções "Escolhendo o banco" e "Remover o Redis"), validadas seguindo-as à risca numa cópia por banco e na remoção do Redis. Regra do `AGENTS.md`: toda mudança que adicione arquivo, dependência, variável ou script de banco/Redis atualiza as listas lá.
 
-### Escolhendo o banco: apagar o banco descartado (`<outro>` = `postgres` ou `mongo`)
+## 12. Fase 5: rate limit, limpeza de tokens, Docker, CI
 
-1. **Pastas e arquivos**:
-   - `src/infra/db/<outro>/` (inclui client, env, connect, schema/models, migrations, indexes);
-   - `**/*.<outro>.ts` e `**/*.<outro>.test.ts` em `src/modules/**` (`schema`, `repository`, e os testes `repository.*` e `routes.*`);
-   - `src/test/db.<outro>.ts` e, no Postgres, `src/test/global-setup.postgres.ts`.
-2. **`src/infra/db/index.ts`**: apontar o re-export para o banco mantido (`./postgres` ou `./mongo`).
-3. **Agregadores do banco mantido** continuam listando todos os módulos (`schema.ts` / `models.ts` e as linhas do `connect.ts`, incluindo `refreshTokens`); nada a mudar, só conferir. Ao ficar com Mongo, as `migrations/` somem junto com a pasta do Postgres.
-4. **Dependências** (`pnpm remove`): `drizzle-orm`, `drizzle-kit`, `postgres` (ao descartar o Postgres) ou `mongoose` (ao descartar o Mongo).
-5. **Compose**: serviço do banco descartado e seu volume em `docker-compose.yml` (e comentário do topo).
-6. **`package.json`**: scripts `db:up:<outro>`, `test:<outro>`, `--profile <outro>` do `db:down`; Postgres: `db:generate`, `db:migrate`, `db:studio`; Mongo: `db:indexes`; ajustar `test:all` se necessário (usa o vitest sem filtro).
-7. **`vitest.config.ts`**: projeto `<outro>`, `<outro>` no `exclude` do projeto `unit` e as linhas `process.env` de teste (`DATABASE_URL` ou `MONGODB_URI`/`MONGODB_DB`).
-8. **`.env.example`**: bloco do banco descartado (e `TEST_DATABASE_URL` / `TEST_MONGODB_URI`).
-9. **`.dependency-cruiser.cjs`**: constante e regras do banco descartado (e `postgres-not-mongo`/`mongo-not-postgres`, que deixam de fazer sentido).
-10. **Gerador** `scripts/new-module.ts`: ramos `hasPostgres`/`hasMongo` do banco descartado e os templates `scripts/templates/module/*.<outro>*.tpl`.
-11. **Documentação**: trechos do `AGENTS.md` e de `docs/` que citam o banco descartado, a matriz do CI e a própria seção do README.
-12. **Conferência**: `grep -rniE "<outro>|drizzle|postgres" --exclude-dir=node_modules --exclude-dir=.git .` (ajustar o padrão ao banco removido: `mongo|mongoose` ou `postgres|drizzle`) deve voltar vazio, e `pnpm install && pnpm check` verde. Para os termos que sobrarem de propósito (ex.: `docs/decisoes.md`), ajustar ou apagar.
-
-### Remover o Redis
-
-1. Apagar `src/infra/cache/` (inclui `cache.redis.test.ts`).
-2. `src/index.ts`: remover o import de `~/infra/cache`, o bloco `cacheEnv`/`redis`, o `cache:` do `buildApp` e o `await redis?.close()`.
-3. `src/app.ts`: remover o import de `Cache`, o campo `cache?` de `AppDeps` e o argumento `cache` do `rootRouter`; `src/http/routes/root.ts`: remover a opção `cache`, o `ping` e o `503` (o `/health` volta a ser só `{ status: 'ok' }`; ajustar `healthSchema`) e o teste "GET /health with a cache configured" em `src/http/routes/root.test.ts`.
-4. `pnpm remove ioredis`.
-5. `docker-compose.yml`: serviço `redis`, volume `redis-data` e o comentário do topo; `package.json`: scripts `db:up:redis`, `test:redis` e o `--profile redis` do `db:down`.
-6. `vitest.config.ts`: projeto `redis`, `redis` no `exclude` do projeto `unit` e o `process.env.REDIS_URL` de teste.
-7. `.env.example`: blocos `redis` e `TEST_REDIS_URL`.
-8. `grep -rniE "redis|ioredis" --exclude-dir=node_modules --exclude-dir=.git .` deve voltar vazio; `pnpm install && pnpm check`.
+- **Rate limit** (`@fastify/rate-limit`, `src/http/rate-limit.ts`): global por IP (300/min) e orçamento próprio em `/auth/*` (20/min, contador separado pelo prefixo `auth:`); em refresh/logout também por **hash** do token (via `app.createRateLimit`, porque o plugin só roda um limitador por rota/requisição). `/health` isento. 429 sai pelo `setErrorHandler` único (formato padrão). Store em memória; com Redis usa o **mesmo cliente ioredis** do `src/infra/cache/`, exposto como `CacheConnection.client` (a interface `Cache` não mudou; módulos continuam sem ver o Redis). `skipOnError: true`: falha do Redis não derruba a API. Atrás de proxy: `TRUST_PROXY`. Nos testes os limites de env são altos (`vitest.config.ts`) e os testes de limite passam valores pequenos por `buildApp({ rateLimit })`.
+- **Limpeza de refresh tokens**: `deleteExpired(before)` apaga **só os expirados**. Revogados/rotacionados ficam até expirar: apagá-los antes faria o reuso parecer "token desconhecido" (401 simples) e a família de um atacante que já usou o token roubado seguiria viva. Armazenamento limitado por `REFRESH_TOKEN_TTL`. Timer no processo (`unref`, sem sobreposição, parado no shutdown; `TOKEN_CLEANUP_INTERVAL`, `0s` desliga), `pnpm tokens:cleanup` para cron, índice TTL em `expiresAt` no Mongo.
+- **Dockerfile**: multi-stage (deps → build com tsdown → deps de produção → runtime `node:24-slim`, usuário `node`, `HEALTHCHECK` com `fetch` do Node, sem curl). pnpm instalado na versão do `packageManager`. Migrações Postgres: `dist/migrate.js` (segunda entrada do tsdown, com `dist/migrations/` copiada), executado como passo separado com a mesma imagem. Instalação com `--ignore-scripts` (o `prepare` do husky não roda sem git).
+- **Devcontainer**: imagem `typescript-node:24-bookworm`, sem features externas; sobe `app` + Postgres do compose (`runServices`); hosts dos bancos por nome de serviço; Mongo com `directConnection=true` porque o replica set anuncia `localhost`.
+- **CI**: `check:fast` + build; matriz `db` (postgres, mongo) sobe o banco com os mesmos perfis do compose (`pnpm db:up:<banco>`; um container de serviço não consegue o `--replSet`/`rs.initiate` do Mongo); job `redis`; job de build da imagem. Sem deploy.

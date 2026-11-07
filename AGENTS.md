@@ -4,7 +4,7 @@ Guia para agentes (e pessoas) neste repositório. Leia inteiro antes de editar.
 
 ## O que é
 
-Template de API HTTP em **Fastify 5 + Zod 4** (TypeScript, Node 24, pnpm 12). Auth stateless com login Google (ID token → access JWT de vida curta + refresh token rotativo no banco). Documentação interativa em `/docs` (Scalar). Traz **Postgres (Drizzle) e Mongo (Mongoose) lado a lado**; um projeto real usa só um e apaga o outro **manualmente** (seção "Escolhendo o banco" do README). Redis é cache **opcional**.
+Template de API HTTP em **Fastify 5 + Zod 4** (TypeScript, Node 24, pnpm 12). Auth stateless com login Google (ID token → access JWT de vida curta + refresh token rotativo no banco). Rate limit por IP (mais estrito em `/auth/*`). Documentação interativa em `/docs` (Scalar). Traz **Postgres (Drizzle) e Mongo (Mongoose) lado a lado**; um projeto real usa só um e apaga o outro **manualmente** (seção "Escolhendo o banco" do README). Redis é cache **opcional**.
 
 Módulos de exemplo: `users` (`GET /users/me`), `todo` (CRUD por usuário), `auth` (`/auth/google`, `/auth/refresh`, `/auth/logout`).
 
@@ -26,9 +26,12 @@ Use pnpm (versão fixada em `packageManager`).
 | `pnpm new:module <nome>` | gera um módulo (ver "Criar um módulo") | não |
 | `pnpm db:generate` / `db:migrate` / `db:studio` | Drizzle (Postgres) | sim (`migrate`, `studio`) |
 | `pnpm db:indexes` | sincroniza índices (Mongo) | sim |
-| `pnpm build` / `pnpm start` | tsdown → `dist/index.js` | — |
+| `pnpm tokens:cleanup` | apaga refresh tokens expirados (cron externo; ver `docs/auth.md`) | sim |
+| `pnpm build` / `pnpm start` | tsdown → `dist/index.js` (+ `dist/migrate.js` e `dist/migrations/`, Postgres) | — |
 
-Subir bancos (Docker Compose, perfis): `pnpm db:up:postgres`, `pnpm db:up:mongo`, `pnpm db:up:redis`; derrubar: `pnpm db:down`. Os testes usam bancos próprios (`app_test`, redis db 15), nunca os de dev. Variáveis: copie `.env.example` para `.env`.
+Subir bancos (Docker Compose, perfis): `pnpm db:up:postgres`, `pnpm db:up:mongo`, `pnpm db:up:redis`; derrubar: `pnpm db:down`. Os testes usam bancos próprios (`app_test`, redis db 15), nunca os de dev. Variáveis: copie `.env.example` para `.env`; toda variável nova entra em `src/env.ts` (ou no `env.ts` do banco/cache/módulo), no `.env.example` e na tabela de `docs/auth.md` se for de auth/rate limit. Rate limit (`RATE_LIMIT_*`, `TRUST_PROXY`) e limpeza de tokens (`TOKEN_CLEANUP_INTERVAL`): `docs/auth.md`.
+
+**Docker e CI**: `Dockerfile` multi-stage de produção (usuário não-root, `HEALTHCHECK` em `/health`; migrações Postgres como passo à parte: `node dist/migrate.js`). Desenvolvimento no devcontainer (`.devcontainer/`). CI em `.github/workflows/ci.yml` (`check:fast`, matriz de banco `postgres`/`mongo`, `redis`, build da imagem): mudou script de teste, banco ou versão do Node? Atualize o workflow.
 
 ## Mapa de pastas
 
@@ -44,6 +47,7 @@ src/
     db/postgres/           client, env, connect, schema.ts (agregador), migrations/
     db/mongo/              client, env, connect, models.ts (agregador), indexes
     cache/                 Redis opcional (interface Cache, connect, env)
+  http/rate-limit.ts       plugin do rate limit (memória, ou Redis se configurado)
   http/routes/root.ts      / e /health
   utils/                   genéricos: result, error-handler, parse-env, duration...
   test/                    helpers de teste (auth falsa, db.<banco>.ts, no-repositories)
@@ -89,7 +93,7 @@ Todo código de banco vive em arquivos que o nome identifica: `*.postgres.ts`, `
 3. **Dados escopados por `request.user.id`**: o id do usuário vem sempre do token, nunca do body/params. Todo método de repositório de dado de usuário recebe `userId` e filtra por ele; recurso de outro usuário = 404, indistinguível de inexistente. ID malformado no adaptador retorna `null`/`false`, nunca erro de banco.
 4. **Formato de erro único** `{ error, message, statusCode, issues? }`: service retorna `fail({ code, message })` e a rota faz `throw toHttpError(result.error)`. Documente respostas com `routeSchema({ protected, notFound, ... })`.
 5. **Sem `console.*`** no código da aplicação (use `app.log` / `request.log`). Exceções existentes: validação de env em `src/env.ts` e o `catch` final de `src/index.ts`.
-6. **Toda mudança que adicionar/remover arquivo, dependência, variável de ambiente ou script ligado a banco atualiza a checklist** de "Escolhendo o banco" (README) e, se for o caso, a de "Remover o Redis". A lista de referência está em `docs/decisoes.md`, seção "Checklists para o README".
+6. **Toda mudança que adicionar/remover arquivo, dependência, variável de ambiente ou script ligado a banco atualiza a checklist** de "Escolhendo o banco" (README) e, se for o caso, a de "Remover o Redis" (mesma seção do README; inclui `tsdown.config.ts`, `Dockerfile`, CI e devcontainer). Faça a mudança, depois confira a lista.
 7. **Sempre instale a última versão estável**: `pnpm add <pacote>@latest` (e `-D` para dev). Não copie versão de memória. pnpm 12 bloqueia scripts de build; só libere em `pnpm-workspace.yaml` (`allowBuilds`) o que for realmente necessário.
 8. Não crie rota que emita token sem prova de identidade; não coloque segredo em código ou em `.env.example`.
 9. Teste comportamento de repositório e de rotas nas **suítes de contrato**, rodadas contra banco real nos dois bancos. Não há adaptador em memória.
@@ -123,5 +127,6 @@ Se o Docker não criar redes bridge na sua máquina, use um override do compose 
 
 - `docs/adicionar-modulo.md`: receita do gerador e das partes manuais.
 - `docs/auth.md`: fluxo, variáveis, trocar/adicionar provedor, proteger rotas.
-- `docs/decisoes.md`: por que o projeto é assim, por tema, e checklists para o README.
+- `README.md`: começo rápido, Docker/CI e as checklists "Escolhendo o banco" e "Remover o Redis".
+- `docs/decisoes.md`: por que o projeto é assim, por tema.
 - `docs/ROADMAP.md`: plano da reforma do template.
