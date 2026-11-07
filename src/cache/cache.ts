@@ -1,13 +1,14 @@
 import IORedis from 'ioredis'
 
-import { env } from '@env'
+import { env } from '~/env'
 
 export class Cache {
   private static client: IORedis
 
   constructor() {
     if (Cache.client) return
-    Cache.client = new IORedis(env.REDIS_URL)
+    if (!env.redis.url) throw new Error('REDIS_URL is not configured')
+    Cache.client = new IORedis(env.redis.url)
   }
 
   async get<T>(key: string): Promise<T | null> {

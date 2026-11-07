@@ -1,10 +1,33 @@
-import { env } from '@env'
-import { fastifyInstance } from './app'
+import { buildApp } from '~/app'
+import { env } from '~/env'
 
 async function bootstrap() {
-  await fastifyInstance.listen({ host: env.HOST, port: env.PORT })
-  console.log(fastifyInstance.printRoutes())
-  console.log(`HTTP server running on http://${env.HOST}:${env.PORT}`)
+  const app = await buildApp()
+
+  let closing = false
+  const shutdown = async (signal: string) => {
+    if (closing) return
+    closing = true
+    app.log.info({ signal }, 'shutting down')
+    try {
+      await app.close()
+      process.exit(0)
+    } catch (err) {
+      app.log.error(err, 'error during shutdown')
+      process.exit(1)
+    }
+  }
+  process.on('SIGTERM', () => void shutdown('SIGTERM'))
+  process.on('SIGINT', () => void shutdown('SIGINT'))
+
+  await app.listen({ host: env.http.host, port: env.http.port })
+
+  if (env.nodeEnv === 'development') {
+    app.log.debug(`\n${app.printRoutes()}`)
+  }
 }
 
-bootstrap()
+bootstrap().catch(err => {
+  console.error(err)
+  process.exit(1)
+})

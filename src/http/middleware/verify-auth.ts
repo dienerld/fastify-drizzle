@@ -1,59 +1,16 @@
-import type { FastifyRequest, onRequestHookHandler } from 'fastify'
-import { JsonWebTokenError, TokenExpiredError, verify } from 'jsonwebtoken'
+import type { onRequestHookHandler } from 'fastify'
+import jwt from 'jsonwebtoken'
+
+const { JsonWebTokenError, TokenExpiredError, verify } = jwt
+
 import z from 'zod'
 
-import { env } from '@env'
-
-function verifyVerb(allowedVerb: string | null, requestVerb?: string) {
-  if (!allowedVerb || !requestVerb) return true
-  return allowedVerb === requestVerb
-}
-
-function isRouteAllowed(_allowedRoute: string, request: FastifyRequest) {
-  const currentRoute = request.url
-  const requestVerb = request.method.toUpperCase()
-  let allowedRoute = _allowedRoute
-  let allowedRouteVerb: string | null = null
-  if (
-    ['GET', 'POST', 'PUT', 'DELETE'].includes(
-      allowedRoute.split(' ')[0].toUpperCase()
-    )
-  ) {
-    const [_allowedRouteVerb, _allowedRoute] = allowedRoute.split(' ')
-    allowedRouteVerb = _allowedRouteVerb
-    allowedRoute = _allowedRoute
-  }
-
-  if (allowedRoute.endsWith('*')) {
-    let baseRoute = allowedRoute.slice(0, -1) // Remove o wildcard
-    if (baseRoute.endsWith('/')) {
-      baseRoute = baseRoute.slice(0, -1)
-    }
-
-    return (
-      verifyVerb(allowedRouteVerb, requestVerb) &&
-      currentRoute.startsWith(baseRoute)
-    ) // Verifica se a rota atual começa com a baseRoute
-  }
-
-  const currentRouteWithoutEndSlash =
-    currentRoute.length === 1 ? currentRoute : currentRoute.replace(/\/$/, '')
-
-  // verifica se allowedRoute tem verbo
-
-  // Verifica se a rota liberada é um wildcard
-
-  // Para casos em que não é um wildcard
-  return (
-    allowedRoute === currentRouteWithoutEndSlash &&
-    verifyVerb(allowedRouteVerb, requestVerb)
-  )
-}
+import { env } from '~/env'
 
 export const verifyAuth: onRequestHookHandler = async (request, reply) => {
   const userSession = request.headers['x-user-session'] as string
   try {
-    const session = verify(userSession, env.SESSION_SECRET) as unknown as {
+    const session = verify(userSession, env.auth.sessionSecret) as unknown as {
       id: string
     }
     if (!session) {

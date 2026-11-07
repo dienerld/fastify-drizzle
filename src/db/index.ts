@@ -1,20 +1,21 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { env } from '../env'
+import { env } from '~/env'
 
 export {
-  eq,
   and,
-  or,
-  not,
   asc,
-  desc,
   between,
-  sql,
+  desc,
+  eq,
+  not,
+  or,
   type SQL,
+  sql,
 } from 'drizzle-orm'
+
 import * as tables from './schemas'
 
 export { tables }
-export const client = postgres(env.DATABASE_URL)
+export const client = postgres(env.db.url)
 export const db = drizzle(client, { schema: tables, logger: false })

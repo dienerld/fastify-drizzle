@@ -18,7 +18,7 @@
       "driver": "PostgreSQL",
       "name": "Farm",
       "group": "Personal",
-      "database": "farm-manager",
+      "database": "app",
       "username": "docker",
       "password": "docker"
     },

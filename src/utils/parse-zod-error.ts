@@ -28,7 +28,7 @@ export const parseZodError = (
   req: FastifyRequest,
   reply: FastifyReply
 ) => {
-  console.error(err)
+  req.log.error(err)
 
   if (hasZodFastifySchemaValidationErrors(err)) {
     return reply.code(400).send({

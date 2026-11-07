@@ -29,4 +29,24 @@ export const rootRouter: FastifyPluginAsyncZod = async app => {
       })
     }
   )
+
+  app.get(
+    '/health',
+    {
+      schema: {
+        ...generateResponseSchemaHandler({
+          description: 'Health check',
+          tags: ['Root'],
+          operationId: 'health',
+          summary: 'Health',
+          isPublic: true,
+          codeResponseSuccess: 200,
+          schemaResponseSuccess: z.object({ status: z.literal('ok') }),
+        }),
+      },
+    },
+    async (_, reply) => {
+      reply.send({ status: 'ok' })
+    }
+  )
 }

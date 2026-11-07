@@ -1,6 +1,6 @@
-import { createId } from "@paralleldrive/cuid2";
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "./user";
+import { createId } from '@paralleldrive/cuid2'
+import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { user } from './user'
 
 export const todo = pgTable('todos', {
   id: text('id')
@@ -9,7 +9,9 @@ export const todo = pgTable('todos', {
   title: text('title').notNull(),
   description: text('description'),
   completed: boolean('completed').notNull(),
-  userId: text('user_id').notNull().references(() => user.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

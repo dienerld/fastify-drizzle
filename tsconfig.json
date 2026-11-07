@@ -1,33 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_version": "20.1.0",
   "compilerOptions": {
-    "lib": [
-      "es2023"
-    ],
-    "module": "node16",
-    "target": "es2022",
+    "lib": ["es2024"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2024",
+    "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "node16",
-    "baseUrl": ".",
+    "noEmit": true,
     "paths": {
-      "~/*": [
-        "./src/*"
-      ],
-      "@env": [
-        "./src/env.ts"
-      ],
-      "@db/*": [
-        "./src/db/*"
-      ],
-      "@utils/*": [
-        "./src/utils/*"
-      ],
-      "@http/*": [
-        "./src/http/*"
-      ]
+      "~/*": ["./src/*"]
     }
-  }
+  },
+  "include": ["src", "*.ts"]
 }

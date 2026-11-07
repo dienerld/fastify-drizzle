@@ -1,67 +1,62 @@
-import { join } from 'node:path'
-import fastifyAutoload, { type AutoloadPluginOptions } from '@fastify/autoload'
 import fastifyCookie from '@fastify/cookie'
 import fastifyCors from '@fastify/cors'
 import fastifySession from '@fastify/session'
 import fastifySwagger from '@fastify/swagger'
-import fastify, { type FastifyServerOptions } from 'fastify'
+import scalarApiReference from '@scalar/fastify-api-reference'
+import fastify from 'fastify'
 import {
-  type ZodTypeProvider,
   jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
+  type ZodTypeProvider,
 } from 'fastify-type-provider-zod'
 
-import { env } from '@env'
+import { client } from '~/db'
+import { env } from '~/env'
+import { rootRouter } from '~/http/routes/root'
+import usersModule from '~/modules/users'
 import { parseZodError } from '~/utils/parse-zod-error'
 
-import { rootRouter } from './http/routes/root'
+export async function buildApp() {
+  const app = fastify({
+    logger:
+      env.nodeEnv === 'test'
+        ? false
+        : { level: env.nodeEnv === 'production' ? 'info' : 'debug' },
+  })
+    .setValidatorCompiler(validatorCompiler)
+    .setSerializerCompiler(serializerCompiler)
+    .withTypeProvider<ZodTypeProvider>()
 
-export interface AppOptions
-  extends FastifyServerOptions,
-    Partial<AutoloadPluginOptions> {}
-// Pass --options via CLI arguments in command to enable these options.
-const options: AppOptions = {}
+  app.setErrorHandler(parseZodError)
 
-export const fastifyInstance = fastify()
-  .setValidatorCompiler(validatorCompiler)
-  .setSerializerCompiler(serializerCompiler)
-  .withTypeProvider<ZodTypeProvider>()
-  .register(fastifyCors, { origin: env.CORS })
-  .register(fastifyCookie)
-  .register(fastifySession, { secret: env.SESSION_SECRET })
-  .register(fastifySwagger, {
+  await app.register(fastifyCors, { origin: env.http.cors })
+  await app.register(fastifyCookie)
+  await app.register(fastifySession, { secret: env.auth.sessionSecret })
+  await app.register(fastifySwagger, {
     openapi: {
       info: {
-        title: 'Sample API',
-        description: 'Sample backend service with Fastify',
+        title: 'Fastify API Template',
+        description: 'Backend service with Fastify',
         version: '1.0.0',
       },
       servers: [],
       tags: [
         { name: 'Root', description: 'Operations about root' },
-        { name: 'Animal', description: 'Operations about animals' },
         { name: 'User', description: 'Operations about users' },
-        { name: 'Production', description: 'Operations about productions' },
       ],
     },
     transform: jsonSchemaTransform,
   })
-  .register(require('@scalar/fastify-api-reference'), {
-    routePrefix: '/docs',
+  await app.register(scalarApiReference, { routePrefix: '/docs' })
+
+  await app.register(rootRouter, { prefix: '/' })
+  await app.register(usersModule)
+
+  app.addHook('onClose', async () => {
+    await client.end({ timeout: 5 })
   })
-  .setErrorHandler(parseZodError)
 
-fastifyInstance.register(rootRouter, { prefix: '/' })
-
-// This loads all plugins defined in plugins
-// those should be support plugins that are reused
-// through your application
-// void app.register(fastifyAutoload, {
-//   dir: join(__dirname, 'plugins'),
-//   options: opts,
-// })
-void fastifyInstance.register(fastifyAutoload, {
-  dir: join(__dirname, 'modules'),
-  maxDepth: 1,
-})
+  await app.ready()
+  return app
+}
