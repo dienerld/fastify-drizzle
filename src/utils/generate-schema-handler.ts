@@ -1,36 +1,30 @@
-import type { ZodArray, ZodObject, ZodRawShape, ZodTypeAny } from 'zod'
+import type { ZodType } from 'zod'
 
-import { schemaResponseUnauthorized } from '~/http/middleware/verify-auth'
+import { errorResponseSchema } from './error-handler'
 
-import { schemaBadRequest, schemaInternalError } from './parse-zod-error'
-
-type GenerateSchemaHandlerOptions = {
-  schemaResponseSuccess: ZodObject<ZodRawShape> | ZodArray<ZodTypeAny>
-  codeResponseSuccess: number
+type RouteDocs = {
+  response: ZodType
+  status?: number
   description: string
-  tags: string[]
+  tags?: string[]
   operationId: string
   summary: string
-  isPublic?: boolean
+  /** Adds the 401 response when the route requires auth. */
+  protected?: boolean
 }
 
-export const generateResponseSchemaHandler = ({
-  codeResponseSuccess,
-  schemaResponseSuccess,
-  ...restData
-}: GenerateSchemaHandlerOptions) => {
-  const responseSchema: Record<number, ZodTypeAny | undefined> = {
-    [codeResponseSuccess]: schemaResponseSuccess,
-    400: schemaBadRequest,
-    500: schemaInternalError,
-  }
-
-  if (!restData.isPublic) {
-    responseSchema[401] = schemaResponseUnauthorized
-  }
-
-  return {
-    ...restData,
-    response: responseSchema,
-  }
-}
+/** Builds the route `schema` docs/response map, always including the standard error shape. */
+export const routeSchema = ({
+  response,
+  status = 200,
+  protected: isProtected,
+  ...docs
+}: RouteDocs) => ({
+  ...docs,
+  response: {
+    [status]: response,
+    400: errorResponseSchema,
+    ...(isProtected ? { 401: errorResponseSchema } : {}),
+    500: errorResponseSchema,
+  },
+})

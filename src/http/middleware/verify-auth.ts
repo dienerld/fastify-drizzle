@@ -3,8 +3,6 @@ import jwt from 'jsonwebtoken'
 
 const { JsonWebTokenError, TokenExpiredError, verify } = jwt
 
-import z from 'zod'
-
 import { env } from '~/env'
 
 export const verifyAuth: onRequestHookHandler = async (request, reply) => {
@@ -17,6 +15,7 @@ export const verifyAuth: onRequestHookHandler = async (request, reply) => {
       reply.code(401).send({
         error: 'Unauthorized',
         message: 'No session provided',
+        statusCode: 401,
       })
       return
     }
@@ -25,36 +24,24 @@ export const verifyAuth: onRequestHookHandler = async (request, reply) => {
     return
   } catch (e) {
     if (e instanceof JsonWebTokenError) {
-      return reply.code(401).send(
-        schemaResponseUnauthorized.parse({
-          error: 'Unauthorized',
-          message: 'No user id provided',
-          statusCode: 401,
-        })
-      )
-    }
-    if (e instanceof TokenExpiredError) {
-      return reply.code(401).send(
-        schemaResponseUnauthorized.parse({
-          error: 'Unauthorized',
-          message: 'Token expired',
-          statusCode: 401,
-        })
-      )
-    }
-
-    return reply.code(401).send(
-      schemaResponseUnauthorized.parse({
+      return reply.code(401).send({
         error: 'Unauthorized',
-        message: 'Invalid token',
+        message: 'No user id provided',
         statusCode: 401,
       })
-    )
+    }
+    if (e instanceof TokenExpiredError) {
+      return reply.code(401).send({
+        error: 'Unauthorized',
+        message: 'Token expired',
+        statusCode: 401,
+      })
+    }
+
+    return reply.code(401).send({
+      error: 'Unauthorized',
+      message: 'Invalid token',
+      statusCode: 401,
+    })
   }
 }
-
-export const schemaResponseUnauthorized = z.object({
-  error: z.string(),
-  message: z.string(),
-  statusCode: z.literal(401),
-})

@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { verifyAuth } from '~/http/middleware/verify-auth'
 import { verifyToken } from '~/http/middleware/verify-token'
-import { generateResponseSchemaHandler } from '~/utils/generate-schema-handler'
+import { routeSchema } from '~/utils/generate-schema-handler'
 import { registrySession } from '~/utils/registry-session'
 
 import { createUser } from './functions/create-user'
@@ -13,7 +13,7 @@ const createUserSchema = z.object({
   fullName: z.string(),
   firstName: z.string(),
   lastName: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   externalId: z.string(),
   picture: z.string().optional(),
 })
@@ -25,14 +25,12 @@ export const routes: FastifyPluginAsyncZod = async app => {
       onRequest: [verifyToken],
       schema: {
         body: createUserSchema,
-        ...generateResponseSchemaHandler({
-          tags: ['User'],
+        ...routeSchema({
           operationId: 'createUser',
           summary: 'Create',
           description: 'Create a new user',
-          isPublic: true,
-          codeResponseSuccess: 201,
-          schemaResponseSuccess: z.object({
+          status: 201,
+          response: z.object({
             id: z.string(),
             newUser: z.boolean(),
           }),
@@ -65,13 +63,12 @@ export const routes: FastifyPluginAsyncZod = async app => {
       onRequest: [verifyAuth],
       schema: {
         params: z.object({ externalId: z.string() }),
-        ...generateResponseSchemaHandler({
-          tags: ['User'],
+        ...routeSchema({
           operationId: 'getUser',
           summary: 'Get By External Id',
           description: 'Get a user',
-          codeResponseSuccess: 200,
-          schemaResponseSuccess: userResponseSchema,
+          protected: true,
+          response: userResponseSchema,
         }),
       },
     },

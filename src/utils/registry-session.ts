@@ -17,10 +17,12 @@ export function registrySession(
     instance.header('x-user-session', session)
     // biome-ignore lint/suspicious/noExplicitAny: error type is unknown here
   } catch (e: any) {
+    instance.log.error(e)
     return instance.code(500).send({
       statusCode: 500,
-      error: e.name,
-      message: e.message,
+      error: 'Internal Server Error',
+      message:
+        env.nodeEnv === 'production' ? 'Internal Server Error' : e.message,
     })
   }
 }

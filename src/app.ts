@@ -10,12 +10,12 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod'
-
 import { client } from '~/db'
 import { env } from '~/env'
 import { rootRouter } from '~/http/routes/root'
 import usersModule from '~/modules/users'
-import { parseZodError } from '~/utils/parse-zod-error'
+import { registerErrorHandlers } from '~/utils/error-handler'
+import pkg from '../package.json' with { type: 'json' }
 
 export async function buildApp() {
   const app = fastify({
@@ -28,7 +28,7 @@ export async function buildApp() {
     .setSerializerCompiler(serializerCompiler)
     .withTypeProvider<ZodTypeProvider>()
 
-  app.setErrorHandler(parseZodError)
+  registerErrorHandlers(app)
 
   await app.register(fastifyCors, { origin: env.http.cors })
   await app.register(fastifyCookie)
@@ -36,15 +36,10 @@ export async function buildApp() {
   await app.register(fastifySwagger, {
     openapi: {
       info: {
-        title: 'Fastify API Template',
-        description: 'Backend service with Fastify',
-        version: '1.0.0',
+        title: pkg.name,
+        version: pkg.version,
       },
       servers: [],
-      tags: [
-        { name: 'Root', description: 'Operations about root' },
-        { name: 'User', description: 'Operations about users' },
-      ],
     },
     transform: jsonSchemaTransform,
   })

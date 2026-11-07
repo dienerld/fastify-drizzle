@@ -8,6 +8,7 @@ export const verifyToken: onRequestHookHandler = async (request, reply) => {
   if (!authHeader) {
     reply.code(403).send({
       error: 'Forbidden',
+      statusCode: 403,
       message: 'No token provided',
     })
     return
@@ -16,6 +17,7 @@ export const verifyToken: onRequestHookHandler = async (request, reply) => {
   if (authHeader !== env.auth.accessKey) {
     reply.code(403).send({
       error: 'Forbidden',
+      statusCode: 403,
       message: 'Invalid Token',
     })
     return

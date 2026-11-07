@@ -1,4 +1,4 @@
-import z from 'zod'
+import { z } from 'zod'
 
 const envSchema = z.object({
   NODE_ENV: z
@@ -19,10 +19,10 @@ const envSchema = z.object({
   JWT_EXPIRATION: z.string().optional(),
 
   // db
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.url(),
 
   // legacy: only used by src/cache/cache.ts (removed in phase 3)
-  REDIS_URL: z.string().url().optional(),
+  REDIS_URL: z.url().optional(),
 })
 
 function loadEnv() {
