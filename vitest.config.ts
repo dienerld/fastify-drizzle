@@ -7,6 +7,9 @@ const baseEnv = {
   NODE_ENV: 'test',
   JWT_SECRET: 'test-secret-with-at-least-32-characters!!',
   GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com',
+  // roomy limits: only the rate limit tests set small ones (via buildApp)
+  RATE_LIMIT_MAX: '100000',
+  RATE_LIMIT_AUTH_MAX: '100000',
 }
 
 // DB tests always target the `*_test` databases (never the dev one), even when

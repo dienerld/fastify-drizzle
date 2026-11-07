@@ -16,3 +16,12 @@ export const noRepositories = {
   todos: unusable('todos'),
   refreshTokens: unusable('refreshTokens'),
 } as Repositories
+
+/**
+ * Like `noRepositories`, but every refresh token is unknown (401 on refresh):
+ * lets HTTP tests exercise `/auth/refresh` and `/auth/logout` without a DB.
+ */
+export const unknownTokens = {
+  ...noRepositories,
+  refreshTokens: { findByHash: async () => null },
+} as unknown as Repositories

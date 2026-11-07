@@ -27,8 +27,45 @@ cliente --POST /auth/logout  { refreshToken }--> revoga a sessão (sempre 204)
 | `ACCESS_TOKEN_TTL` | `15m` | `<número><s\|m\|h\|d>` |
 | `REFRESH_TOKEN_TTL` | `30d` | idem |
 | `ALLOWED_EMAILS` | vazia (todos) | lista separada por vírgula, sem diferenciar maiúsculas |
+| `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW` | `300` / `1m` | limite global por IP |
+| `RATE_LIMIT_AUTH_MAX` / `RATE_LIMIT_AUTH_WINDOW` | `20` / `1m` | limite de `/auth/*` (por IP; refresh/logout também por token) |
+| `TRUST_PROXY` | `false` | IP real atrás de proxy: `true`, saltos (`1`) ou IPs/CIDRs |
+| `REFRESH_TOKEN_RETENTION` | `1d` | quanto tempo manter refresh tokens revogados (detecção de reuso) |
+| `TOKEN_CLEANUP_INTERVAL` | `1h` | período da limpeza no processo; `0s` desliga |
+
+Limite de requisições e limpeza de tokens têm as suas próprias variáveis (abaixo e em `.env.example`).
 
 Crie o client id em Google Cloud Console (APIs e serviços → Credenciais → ID do cliente OAuth). O cliente (app mobile/SPA) obtém o ID token com o Google Sign-In e o envia a `/auth/google`.
+
+## Rate limit
+
+`@fastify/rate-limit`, registrado em `src/http/rate-limit.ts` (a config vem de `src/env.ts`):
+
+- **Global**: `RATE_LIMIT_MAX` (padrão 300) requisições por `RATE_LIMIT_WINDOW` (`1m`), por IP, em todas as rotas. `/health` fica de fora (sondas de orquestrador chamam com frequência).
+- **`/auth/*`**: orçamento próprio e mais estrito, `RATE_LIMIT_AUTH_MAX` (20) por `RATE_LIMIT_AUTH_WINDOW` (`1m`), por IP (contador separado do global). Em `/auth/refresh` e `/auth/logout` há ainda um limite **por token** (mesmo máximo e janela) para que um token vazado não seja martelado de vários IPs. A chave é o **SHA-256 do token**, nunca o token cru.
+- **Resposta**: `429` no formato padrão `{ error: 'Too Many Requests', message, statusCode: 429 }`, com `retry-after` e os cabeçalhos `x-ratelimit-*`.
+- **Armazenamento**: em memória (por processo) por padrão. Com `REDIS_URL` o mesmo cliente do `src/infra/cache/` guarda os contadores (prefixo `rl:`), compartilhados por todas as instâncias; se o Redis falhar o limite deixa passar (`skipOnError`) em vez de derrubar a API.
+- **Atrás de proxy/load balancer**: `TRUST_PROXY` (`false`, `true`, número de saltos como `1`, ou IPs/CIDRs). Sem isso todos os clientes aparecem com o IP do proxy e dividem o mesmo limite. Ligue só quando houver um proxy confiável na frente (senão o cliente forja `X-Forwarded-For`).
+- Testes: `src/http/rate-limit.contract.ts` (memória em `rate-limit.test.ts`, Redis em `rate-limit.redis.test.ts`). O `vitest.config.ts` sobe os limites de teste; os testes de limite passam valores pequenos por `buildApp({ rateLimit })`.
+
+## Limpeza de refresh tokens
+
+A tabela/coleção `refresh_tokens` só cresce se ninguém apagar. `RefreshTokenRepository.deleteExpired({ expiredBefore, revokedBefore })` remove:
+
+1. tokens com `expiresAt < expiredBefore` (a limpeza usa "agora"): um token expirado já recebe 401 antes de qualquer outra checagem, então guardá-lo não serve para nada;
+2. tokens **revogados** (rotacionados, logout, família revogada) com `revokedAt < revokedBefore`, ou seja, revogados há mais que a retenção.
+
+Token ativo nunca é apagado.
+
+**Retenção dos revogados** (`REFRESH_TOKEN_RETENTION`, padrão `1d`): enquanto o token revogado existe, reapresentá-lo é detectado como **reuso** e revoga a família inteira. Depois de apagado ele vira "desconhecido" (401 simples): o atacante continua sem acesso, mas **a família não é revogada** e o token legítimo mais novo segue valendo. Por isso a retenção deve ser no mínimo o `ACCESS_TOKEN_TTL` (o padrão de 1 dia é bem maior que os 15 minutos); aumente se quiser detectar reuso por mais tempo, ao custo de guardar mais linhas.
+
+Quem executa:
+
+| Onde | Como |
+| --- | --- |
+| Dentro do processo (Postgres e Mongo) | `setInterval(...).unref()` a cada `TOKEN_CLEANUP_INTERVAL` (padrão `1h`; `0s` desliga), sem passadas sobrepostas, erro só logado, parado no desligamento gracioso. Com várias instâncias todas rodam; o `DELETE` é idempotente. |
+| Cron externo | `pnpm tokens:cleanup` (lê o `.env`, uma passada, imprime quantos apagou). Use com `TOKEN_CLEANUP_INTERVAL=0s` para desligar o timer interno. |
+| Mongo, além disso | índice TTL em `expiresAt` (`expireAfterSeconds: 0`): o próprio MongoDB apaga os expirados (checa a cada ~1 min). Os revogados ainda não expirados saem pela limpeza acima. |
 
 ## Proteger rotas
 
@@ -70,4 +107,4 @@ O provedor aparece em três pontos: o **verificador** (`src/modules/auth/google.
 
 ## Em aberto (ver `docs/decisoes.md`)
 
-Rate limit em `/auth/*`, limpeza periódica de refresh tokens expirados e revogar todas as sessões de um usuário ainda não existem. O access token não é revogável antes de expirar (decisão do modelo stateless).
+Revogar todas as sessões de um usuário ainda não existe. O access token não é revogável antes de expirar (decisão do modelo stateless).

@@ -51,5 +51,15 @@ export function createRefreshTokenRepositoryMongo(
       )
       return res.modifiedCount
     },
+
+    async deleteExpired({ expiredBefore, revokedBefore }) {
+      const res = await Tokens.deleteMany({
+        $or: [
+          { expiresAt: { $lt: expiredBefore } },
+          { revokedAt: { $lt: revokedBefore } }, // `null` never matches $lt
+        ],
+      })
+      return res.deletedCount
+    },
   }
 }

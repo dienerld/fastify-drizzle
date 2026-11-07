@@ -32,4 +32,14 @@ export interface RefreshTokenRepository {
   markRotated(id: string, replacedById: string): Promise<boolean>
   /** Revokes every still-active token of the family. Returns how many. */
   revokeFamily(familyId: string): Promise<number>
+  /**
+   * Housekeeping. Deletes tokens that expired before `expiredBefore` and
+   * tokens revoked (rotated, logged out, family revoked) before
+   * `revokedBefore`. Active tokens are never deleted. Returns how many.
+   * A revoked token must stay a while so that reusing it is still detected.
+   */
+  deleteExpired(cutoffs: {
+    expiredBefore: Date
+    revokedBefore: Date
+  }): Promise<number>
 }

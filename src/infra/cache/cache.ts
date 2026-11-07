@@ -1,3 +1,5 @@
+import type { Redis } from 'ioredis'
+
 /** Minimal typed cache. Values are JSON-serialised. */
 export interface Cache {
   /** `null` when the key is missing or expired. */
@@ -12,5 +14,14 @@ export interface Cache {
 /** What `connect()` returns. */
 export type CacheConnection = {
   cache: Cache
+  /**
+   * The underlying ioredis client, for infrastructure that needs Redis itself
+   * (e.g. the rate limit store shared by several instances). Not for modules:
+   * they receive the `Cache` interface.
+   */
+  client: RedisClient
   close: () => Promise<void>
 }
+
+/** The raw Redis client type (see `CacheConnection.client`). */
+export type RedisClient = Redis

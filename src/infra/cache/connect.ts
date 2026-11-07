@@ -42,6 +42,7 @@ export async function connect(env: CacheEnv): Promise<CacheConnection> {
 
   return {
     cache,
+    client,
     close: async () => {
       try {
         await client.quit()

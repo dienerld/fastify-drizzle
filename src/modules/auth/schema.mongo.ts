@@ -23,6 +23,11 @@ export const refreshTokenSchema = new Schema<RefreshTokenDoc>(
   { collection: 'refresh_tokens', timestamps: true, versionKey: false }
 )
 
+// Safety net: MongoDB itself removes a token once it has expired (TTL index,
+// checked about once a minute). Revoked-but-not-yet-expired tokens are removed
+// by the periodic cleanup (`deleteExpired`), after the retention period.
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+
 /** Models live on a dedicated connection (see `infra/db/mongo/connect.ts`). */
 export const refreshTokenModel = (conn: Connection) =>
   (conn.models.RefreshToken as Model<RefreshTokenDoc> | undefined) ??

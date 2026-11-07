@@ -49,6 +49,8 @@ export const rootRouter: FastifyPluginAsyncZod<{ cache?: Cache }> = async (
   app.get(
     '/health',
     {
+      // probes call this often: never rate limited
+      config: { rateLimit: false },
       schema: {
         ...health,
         response: { ...health.response, 503: healthSchema },

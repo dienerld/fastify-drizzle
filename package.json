@@ -25,7 +25,8 @@
     "db:indexes": "tsx --env-file-if-exists=.env src/infra/db/mongo/indexes.ts",
     "prepare": "husky",
     "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
-    "new:module": "tsx scripts/new-module.ts"
+    "new:module": "tsx scripts/new-module.ts",
+    "tokens:cleanup": "tsx --env-file-if-exists=.env scripts/tokens-cleanup.ts"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +34,7 @@
   "description": "",
   "dependencies": {
     "@fastify/cors": "11.4.1",
+    "@fastify/rate-limit": "^11.2.2",
     "@fastify/swagger": "^9.9.3",
     "@scalar/fastify-api-reference": "^1.77.0",
     "date-fns": "^4.1.0",

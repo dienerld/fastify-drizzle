@@ -105,8 +105,7 @@ O Docker aqui não cria redes bridge (módulo `veth` ausente no kernel em uso). 
 
 ## 10. Em aberto
 
-- Rate limit nos endpoints `/auth/*` (recomendado para produção; previsto na Fase 5 com `@fastify/rate-limit`).
-- Limpeza periódica de refresh tokens expirados/revogados (a tabela/coleção cresce; Fase 5).
+- (feito na Fase 5) Rate limit em `/auth/*` e limpeza de refresh tokens: ver `docs/auth.md`.
 - `GET /auth/*` para fluxo web (hoje só mobile/SPA com ID token).
 - Revogar todas as sessões de um usuário.
 - O access token não é revogável antes de expirar (stateless por decisão).

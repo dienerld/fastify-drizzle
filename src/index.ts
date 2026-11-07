@@ -2,6 +2,10 @@ import { buildApp } from '~/app'
 import { env } from '~/env'
 import * as cache from '~/infra/cache'
 import { connect, loadEnv } from '~/infra/db'
+import {
+  loadCleanupConfig,
+  startRefreshTokenCleanup,
+} from '~/modules/auth/cleanup'
 
 async function bootstrap() {
   const db = await connect(loadEnv())
@@ -11,6 +15,15 @@ async function bootstrap() {
   const app = await buildApp({
     repositories: db.repositories,
     cache: redis?.cache,
+    redis: redis?.client,
+  })
+
+  // Housekeeping for expired/revoked refresh tokens (`pnpm tokens:cleanup`
+  // does the same from an external cron).
+  const cleanup = startRefreshTokenCleanup({
+    refreshTokens: db.repositories.refreshTokens,
+    config: loadCleanupConfig(),
+    log: app.log,
   })
 
   let closing = false
@@ -19,6 +32,7 @@ async function bootstrap() {
     closing = true
     app.log.info({ signal }, 'shutting down')
     try {
+      cleanup?.stop()
       await app.close()
       await db.close()
       await redis?.close()

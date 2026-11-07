@@ -1,3 +1,4 @@
+import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
@@ -6,6 +7,13 @@ import { routeSchema } from '~/utils/generate-schema-handler'
 import { toHttpError } from '~/utils/result'
 
 import { type AuthDeps, createAuthService } from './service'
+import { hashToken } from './tokens'
+
+export type AuthRateLimit = {
+  /** Requests per window, per IP, on every `/auth/*` route. */
+  max: number
+  windowMs: number
+}
 
 const sessionSchema = z.object({
   accessToken: z.string(),
@@ -30,8 +38,49 @@ const tags = ['auth']
  */
 export const authRoutes: FastifyPluginAsyncZod<{
   auth: AuthDeps
-}> = async (app, { auth }) => {
+  rateLimit: AuthRateLimit
+}> = async (app, { auth, rateLimit }) => {
   const service = createAuthService(auth)
+
+  // Stricter than the global limit and keyed apart from it (the `auth:` prefix
+  // keeps the counters separate in a shared Redis store).
+  const perIp = {
+    config: {
+      rateLimit: {
+        max: rateLimit.max,
+        timeWindow: rateLimit.windowMs,
+        keyGenerator: (request: { ip: string }) => `auth:${request.ip}`,
+      },
+    },
+  }
+
+  // refresh/logout: also limit per token, so one stolen/leaked token cannot be
+  // hammered from many IPs. The key is the token HASH, never the raw token.
+  // Runs in `preHandler` because the body is only parsed by then.
+  const checkToken = app.createRateLimit({
+    max: rateLimit.max,
+    timeWindow: rateLimit.windowMs,
+    keyGenerator: request => {
+      const { refreshToken } = refreshBody.parse(request.body)
+      return `auth-token:${hashToken(refreshToken)}`
+    },
+  })
+  const limitPerToken = {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      const result = await checkToken(request)
+      if (result.isAllowed || !result.isExceeded) return
+      reply.header('retry-after', result.ttlInSeconds)
+      throw Object.assign(
+        new Error(`Rate limit exceeded, retry in ${result.ttlInSeconds}s`),
+        { statusCode: 429 }
+      )
+    },
+  }
+
+  const withRateLimit = <T extends ReturnType<typeof routeSchema>>(s: T) => ({
+    ...s,
+    response: { ...s.response, 429: errorResponseSchema },
+  })
 
   const withAuthErrors = <T extends ReturnType<typeof routeSchema>>(s: T) => ({
     ...s,
@@ -39,12 +88,14 @@ export const authRoutes: FastifyPluginAsyncZod<{
       ...s.response,
       401: errorResponseSchema,
       403: errorResponseSchema,
+      429: errorResponseSchema,
     },
   })
 
   app.post(
     '/google',
     {
+      ...perIp,
       schema: {
         body: z.object({ idToken: z.string().min(1) }),
         ...withAuthErrors(
@@ -69,6 +120,8 @@ export const authRoutes: FastifyPluginAsyncZod<{
   app.post(
     '/refresh',
     {
+      ...perIp,
+      ...limitPerToken,
       schema: {
         body: refreshBody,
         ...withAuthErrors(
@@ -93,17 +146,21 @@ export const authRoutes: FastifyPluginAsyncZod<{
   app.post(
     '/logout',
     {
+      ...perIp,
+      ...limitPerToken,
       schema: {
         body: refreshBody,
-        ...routeSchema({
-          operationId: 'logout',
-          summary: 'Logout',
-          description:
-            'Revokes the session of the given refresh token. Always 204.',
-          status: 204,
-          tags,
-          response: z.null(),
-        }),
+        ...withRateLimit(
+          routeSchema({
+            operationId: 'logout',
+            summary: 'Logout',
+            description:
+              'Revokes the session of the given refresh token. Always 204.',
+            status: 204,
+            tags,
+            response: z.null(),
+          })
+        ),
       },
     },
     async (request, reply) => {

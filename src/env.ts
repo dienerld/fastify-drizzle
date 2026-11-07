@@ -18,6 +18,21 @@ const envSchema = z.object({
     .string()
     .default('*')
     .transform(value => value.split(',').map(origin => origin.trim())),
+  // Behind a proxy/load balancer: `true`, a hop count (`1`) or IPs/CIDRs.
+  TRUST_PROXY: z
+    .string()
+    .default('false')
+    .transform((value): boolean | number | string => {
+      if (value === 'true') return true
+      if (value === 'false') return false
+      return /^\d+$/.test(value) ? Number(value) : value
+    }),
+
+  // rate limit (per IP; /auth/* has its own, stricter budget)
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(300),
+  RATE_LIMIT_WINDOW: duration.default('1m'),
+  RATE_LIMIT_AUTH_MAX: z.coerce.number().int().min(1).default(20),
+  RATE_LIMIT_AUTH_WINDOW: duration.default('1m'),
 
   // auth
   JWT_SECRET: z.string().min(32),
@@ -48,7 +63,18 @@ function loadEnv() {
   const e = parsed.data
   return {
     nodeEnv: e.NODE_ENV,
-    http: { host: e.HOST, port: e.PORT, cors: e.CORS },
+    http: {
+      host: e.HOST,
+      port: e.PORT,
+      cors: e.CORS,
+      trustProxy: e.TRUST_PROXY,
+      rateLimit: {
+        max: e.RATE_LIMIT_MAX,
+        windowMs: parseDuration(e.RATE_LIMIT_WINDOW) * 1000,
+        authMax: e.RATE_LIMIT_AUTH_MAX,
+        authWindowMs: parseDuration(e.RATE_LIMIT_AUTH_WINDOW) * 1000,
+      },
+    },
     auth: {
       jwtSecret: e.JWT_SECRET,
       accessTokenTtlSeconds: parseDuration(e.ACCESS_TOKEN_TTL),
