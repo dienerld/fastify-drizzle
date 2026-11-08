@@ -62,30 +62,6 @@ export function describeRateLimit(
       expect(blocked.json()).toEqual(standardError())
     })
 
-    it('limits refresh/logout per token even from other IPs', async () => {
-      const app = await build({ authMax: 2, authWindowMs: 60_000 })
-      const fromIp = (remoteAddress: string, url: string, token: string) =>
-        app.inject({
-          method: 'POST',
-          url,
-          remoteAddress,
-          payload: { refreshToken: token },
-        })
-      expect((await fromIp('10.0.0.1', '/auth/refresh', 't')).statusCode).toBe(
-        401
-      )
-      expect((await fromIp('10.0.0.2', '/auth/refresh', 't')).statusCode).toBe(
-        401
-      )
-      const blocked = await fromIp('10.0.0.3', '/auth/refresh', 't')
-      expect(blocked.statusCode).toBe(429)
-      expect(blocked.json()).toEqual(standardError())
-      // another token from a new IP is fine
-      expect(
-        (await fromIp('10.0.0.4', '/auth/refresh', 'other')).statusCode
-      ).toBe(401)
-    })
-
     it('counts per IP: another client is not blocked', async () => {
       const app = await build({ authMax: 1, authWindowMs: 60_000 })
       const from = (remoteAddress: string) =>

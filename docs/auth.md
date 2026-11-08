@@ -28,7 +28,7 @@ cliente --POST /auth/logout  { refreshToken }--> revoga a sessão (sempre 204)
 | `REFRESH_TOKEN_TTL` | `30d` | idem |
 | `ALLOWED_EMAILS` | vazia (todos) | lista separada por vírgula, sem diferenciar maiúsculas |
 | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW` | `300` / `1m` | limite global por IP |
-| `RATE_LIMIT_AUTH_MAX` / `RATE_LIMIT_AUTH_WINDOW` | `20` / `1m` | limite de `/auth/*` (por IP; refresh/logout também por token) |
+| `RATE_LIMIT_AUTH_MAX` / `RATE_LIMIT_AUTH_WINDOW` | `20` / `1m` | limite de `/auth/*` (por IP) |
 | `TRUST_PROXY` | `false` | IP real atrás de proxy: `true`, saltos (`1`) ou IPs/CIDRs |
 | `TOKEN_CLEANUP_INTERVAL` | `1h` | período da limpeza de tokens expirados no processo; `0s` desliga |
 
@@ -41,7 +41,7 @@ Crie o client id em Google Cloud Console (APIs e serviços → Credenciais → I
 `@fastify/rate-limit`, registrado em `src/http/rate-limit.ts` (a config vem de `src/env.ts`):
 
 - **Global**: `RATE_LIMIT_MAX` (padrão 300) requisições por `RATE_LIMIT_WINDOW` (`1m`), por IP, em todas as rotas. `/health` fica de fora (sondas de orquestrador chamam com frequência).
-- **`/auth/*`**: orçamento próprio e mais estrito, `RATE_LIMIT_AUTH_MAX` (20) por `RATE_LIMIT_AUTH_WINDOW` (`1m`), por IP (contador separado do global). Em `/auth/refresh` e `/auth/logout` há ainda um limite **por token** (mesmo máximo e janela) para que um token vazado não seja martelado de vários IPs. A chave é o **SHA-256 do token**, nunca o token cru.
+- **`/auth/*`**: orçamento próprio e mais estrito, `RATE_LIMIT_AUTH_MAX` (20) por `RATE_LIMIT_AUTH_WINDOW` (`1m`), por IP (contador separado do global). Não há limite por refresh token: o token tem 32 bytes aleatórios (adivinhar é inviável) e um token roubado já é tratado pela rotação e pela detecção de reuso.
 - **Resposta**: `429` no formato padrão `{ error: 'Too Many Requests', message, statusCode: 429 }`, com `retry-after` e os cabeçalhos `x-ratelimit-*`.
 - **Armazenamento**: em memória (por processo) por padrão. Com `REDIS_URL` o mesmo cliente do `src/infra/cache/` guarda os contadores (prefixo `rl:`), compartilhados por todas as instâncias; se o Redis falhar o limite deixa passar (`skipOnError`) em vez de derrubar a API.
 - **Atrás de proxy/load balancer**: `TRUST_PROXY` (`false`, `true`, número de saltos como `1`, ou IPs/CIDRs). Sem isso todos os clientes aparecem com o IP do proxy e dividem o mesmo limite. Ligue só quando houver um proxy confiável na frente (senão o cliente forja `X-Forwarded-For`).

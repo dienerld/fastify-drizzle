@@ -47,7 +47,7 @@ describe('rate limit with the Redis store', () => {
     }
   )
 
-  it('shares the counters between instances and stores only hashes', async () => {
+  it('shares the counters between instances and keeps tokens out of the keys', async () => {
     const limits = { authMax: 2, authWindowMs: 60_000 }
     const make = () =>
       buildApp({
@@ -70,7 +70,8 @@ describe('rate limit with the Redis store', () => {
       expect((await refresh(a)).statusCode).toBe(429) // counted across both
 
       const keys = await conn.client.keys('rl:*')
-      expect(keys.some(key => key.includes('auth-token:'))).toBe(true)
+      expect(keys.some(key => key.includes('auth:'))).toBe(true)
+      expect(keys.join('\n')).not.toContain('undefined')
       expect(keys.join('\n')).not.toContain('super-secret-refresh-token')
     } finally {
       await Promise.all([a.close(), b.close()])

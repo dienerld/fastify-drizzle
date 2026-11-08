@@ -1,4 +1,3 @@
-import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
@@ -7,7 +6,6 @@ import { routeSchema } from '~/utils/generate-schema-handler'
 import { toHttpError } from '~/utils/result'
 
 import { type AuthDeps, createAuthService } from './service'
-import { hashToken } from './tokens'
 
 export type AuthRateLimit = {
   /** Requests per window, per IP, on every `/auth/*` route. */
@@ -51,29 +49,6 @@ export const authRoutes: FastifyPluginAsyncZod<{
         timeWindow: rateLimit.windowMs,
         keyGenerator: (request: { ip: string }) => `auth:${request.ip}`,
       },
-    },
-  }
-
-  // refresh/logout: also limit per token, so one stolen/leaked token cannot be
-  // hammered from many IPs. The key is the token HASH, never the raw token.
-  // Runs in `preHandler` because the body is only parsed by then.
-  const checkToken = app.createRateLimit({
-    max: rateLimit.max,
-    timeWindow: rateLimit.windowMs,
-    keyGenerator: request => {
-      const { refreshToken } = refreshBody.parse(request.body)
-      return `auth-token:${hashToken(refreshToken)}`
-    },
-  })
-  const limitPerToken = {
-    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-      const result = await checkToken(request)
-      if (result.isAllowed || !result.isExceeded) return
-      reply.header('retry-after', result.ttlInSeconds)
-      throw Object.assign(
-        new Error(`Rate limit exceeded, retry in ${result.ttlInSeconds}s`),
-        { statusCode: 429 }
-      )
     },
   }
 
@@ -121,7 +96,6 @@ export const authRoutes: FastifyPluginAsyncZod<{
     '/refresh',
     {
       ...perIp,
-      ...limitPerToken,
       schema: {
         body: refreshBody,
         ...withAuthErrors(
@@ -147,7 +121,6 @@ export const authRoutes: FastifyPluginAsyncZod<{
     '/logout',
     {
       ...perIp,
-      ...limitPerToken,
       schema: {
         body: refreshBody,
         ...withRateLimit(
